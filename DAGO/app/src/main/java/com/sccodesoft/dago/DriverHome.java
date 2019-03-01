@@ -304,7 +304,7 @@ public class DriverHome extends AppCompatActivity
                         handler.removeCallbacks(drawPathRunnable);
 
                     txtStatus.setText("YOU ARE OFFLINE");
-                    txtStatus.setBackground(getResources().getDrawable(R.drawable.btn_register_background));
+                    txtStatus.setBackground(getResources().getDrawable(R.drawable.btn_oflline_background));
                     Snackbar.make(mapFragment.getView(),"You are Offline",Snackbar.LENGTH_SHORT).show();
                 }
 

@@ -90,6 +90,8 @@ public class PhoneLogin extends AppCompatActivity {
         iconphone = (ImageView)findViewById(R.id.iconphone);
         loadingBar = new ProgressDialog(this);
 
+        waitingDialog = new SpotsDialog(PhoneLogin.this);
+
         firebaseStorage = FirebaseStorage.getInstance();
         storageReference = firebaseStorage.getReference();
 
@@ -219,7 +221,8 @@ public class PhoneLogin extends AppCompatActivity {
                     public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
                         if(dataSnapshot.exists()) {
                             Common.currentUser = dataSnapshot.getValue(Rider.class);
-                            waitingDialog.dismiss();
+                            if(waitingDialog.isShowing())
+                                waitingDialog.dismiss();
                             Intent intent = new Intent(PhoneLogin.this, Home.class);
                             intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
                             startActivity(intent);
@@ -227,7 +230,8 @@ public class PhoneLogin extends AppCompatActivity {
                         }
                         else
                         {
-                            waitingDialog.dismiss();
+                            if(waitingDialog.isShowing())
+                                waitingDialog.dismiss();
                             showRegisterDialog();
                         }
                     }
@@ -282,13 +286,13 @@ public class PhoneLogin extends AppCompatActivity {
                 }
                 else
                 {
-                    waitingDialog = new SpotsDialog(PhoneLogin.this);
                     waitingDialog.show();
 
                     Rider user = new Rider();
                     user.setName(edtName.getText().toString());
                     user.setPhone("+94"+phoneNumber.getText().toString());
                     user.setAvatarUrl(avatarUrl);
+                    user.setRates("0.0");
 
                     users.child(mAuth.getCurrentUser().getUid())
                             .setValue(user)

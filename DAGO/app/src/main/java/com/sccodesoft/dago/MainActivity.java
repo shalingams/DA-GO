@@ -24,6 +24,7 @@ import com.sccodesoft.dago.Common.Common;
 import com.sccodesoft.dago.Model.Driver;
 import com.sccodesoft.dago.Model.Token;
 
+import dmax.dialog.SpotsDialog;
 import io.paperdb.Paper;
 
 
@@ -38,6 +39,7 @@ public class MainActivity extends AppCompatActivity {
 
     FirebaseUser currentuser;
 
+    SpotsDialog waitingDialog;
 
    /* @Override
     protected void attachBaseContext(Context newBase) {
@@ -50,6 +52,9 @@ public class MainActivity extends AppCompatActivity {
 
         if(currentuser != null)
         {
+            waitingDialog = new SpotsDialog(MainActivity.this);
+            waitingDialog.show();
+
             loginUser();
         }
     }
@@ -65,17 +70,20 @@ public class MainActivity extends AppCompatActivity {
 
                             updateTokenToServer();
 
+                            waitingDialog.dismiss();
                             startActivity(new Intent(MainActivity.this, DriverHome.class));
                             finish();
                         }
                         else
                         {
+                            waitingDialog.dismiss();
                             Toast.makeText(MainActivity.this, "Click On Continue..", Toast.LENGTH_SHORT).show();                              
                         }
                     }
 
                     @Override
                     public void onCancelled(@NonNull DatabaseError databaseError) {
+                        waitingDialog.dismiss();
                         Toast.makeText(MainActivity.this, "Cancelled..", Toast.LENGTH_SHORT).show();
                     }
                 });
@@ -90,8 +98,6 @@ public class MainActivity extends AppCompatActivity {
                                             .setFontAttrId(R.attr.fontPath)
                                             .build());*/
         setContentView(R.layout.activity_main);
-
-        Paper.init(this);
 
         auth = FirebaseAuth.getInstance();
         db = FirebaseDatabase.getInstance();

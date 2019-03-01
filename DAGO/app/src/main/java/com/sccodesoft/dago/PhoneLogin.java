@@ -73,6 +73,8 @@ public class PhoneLogin extends AppCompatActivity {
 
     CircleImageView image_upload;
 
+    SpotsDialog waitingDialog;
+
     private PhoneAuthProvider.OnVerificationStateChangedCallbacks mCallbacks;
 
     @Override
@@ -86,6 +88,8 @@ public class PhoneLogin extends AppCompatActivity {
         txt94 = (TextView)findViewById(R.id.txt94);
         iconphone = (ImageView)findViewById(R.id.iconphone);
         loadingBar = new ProgressDialog(this);
+
+        waitingDialog = new SpotsDialog(PhoneLogin.this);
 
         firebaseStorage = FirebaseStorage.getInstance();
         storageReference = firebaseStorage.getReference();
@@ -217,6 +221,9 @@ public class PhoneLogin extends AppCompatActivity {
                         if(dataSnapshot.exists()) {
                             Common.currentDriver = dataSnapshot.getValue(Driver.class);
 
+                            if(waitingDialog.isShowing())
+                                waitingDialog.dismiss();
+
                             updateTokenToServer();
 
                             startActivity(new Intent(PhoneLogin.this, DriverHome.class));
@@ -224,6 +231,9 @@ public class PhoneLogin extends AppCompatActivity {
                         }
                         else
                         {
+                            if(waitingDialog.isShowing())
+                                waitingDialog.dismiss();
+
                             showRegisterDialog();
                         }
                     }
@@ -302,7 +312,6 @@ public class PhoneLogin extends AppCompatActivity {
                 }
                 else
                 {
-                    final SpotsDialog waitingDialog = new SpotsDialog(PhoneLogin.this);
                     waitingDialog.show();
 
                                     Driver driver = new Driver();
@@ -310,14 +319,13 @@ public class PhoneLogin extends AppCompatActivity {
                                     driver.setPhone("+94"+phoneNumber.getText().toString());
                                     driver.setAvatarUrl(avatarUrl);
                                     driver.setRates("0.0");
-                                    driver.setCarType("DAGOx");
+                                    driver.setCarType("DAGO X");
 
                                     users.child(mAuth.getCurrentUser().getUid())
                                             .setValue(driver)
                                             .addOnSuccessListener(new OnSuccessListener<Void>() {
                                                 @Override
                                                 public void onSuccess(Void aVoid) {
-                                                    waitingDialog.dismiss();
                                                     Toast.makeText(PhoneLogin.this, "You have Registered Successfully..", Toast.LENGTH_SHORT).show();
 
                                                     loginUser();
