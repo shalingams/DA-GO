@@ -1,33 +1,20 @@
 package com.sccodesoft.dago;
 
-import android.animation.ValueAnimator;
 import android.content.Intent;
-import android.graphics.Color;
 import android.media.MediaPlayer;
-import android.os.Handler;
+import android.os.CountDownTimer;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.util.Log;
 import android.view.View;
-import android.view.animation.LinearInterpolator;
 import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.google.android.gms.maps.CameraUpdate;
-import com.google.android.gms.maps.CameraUpdateFactory;
-import com.google.android.gms.maps.model.BitmapDescriptorFactory;
-import com.google.android.gms.maps.model.JointType;
-import com.google.android.gms.maps.model.LatLng;
-import com.google.android.gms.maps.model.LatLngBounds;
-import com.google.android.gms.maps.model.MarkerOptions;
-import com.google.android.gms.maps.model.PolylineOptions;
-import com.google.android.gms.maps.model.SquareCap;
 import com.sccodesoft.dago.Common.Common;
+import com.sccodesoft.dago.Model.DataMessage;
 import com.sccodesoft.dago.Model.FCMResponse;
-import com.sccodesoft.dago.Model.Notification;
-import com.sccodesoft.dago.Model.Sender;
 import com.sccodesoft.dago.Model.Token;
 import com.sccodesoft.dago.Remote.IFCMServices;
 import com.sccodesoft.dago.Remote.IGoogleApi;
@@ -36,7 +23,8 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
 
 import retrofit2.Call;
 import retrofit2.Callback;
@@ -44,7 +32,7 @@ import retrofit2.Response;
 
 public class CustomerCall extends AppCompatActivity {
 
-    TextView txtTime,txtAddress,txtDistance;
+    TextView txtTime,txtAddress,txtDistance,txtCountDown;
     Button btnCancel,btnAccpet;
 
     MediaPlayer mediaPlayer;
@@ -54,7 +42,8 @@ public class CustomerCall extends AppCompatActivity {
 
     String customerId;
 
-    double lat,lng;
+    String lat;
+    String lng;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -68,6 +57,7 @@ public class CustomerCall extends AppCompatActivity {
         txtAddress = (TextView)findViewById(R.id.txtAddress);
         txtDistance = (TextView)findViewById(R.id.txtDistance);
         txtTime = (TextView)findViewById(R.id.txtTime);
+        txtCountDown = (TextView)findViewById(R.id.txt_count_down);
 
         btnAccpet = (Button)findViewById(R.id.btnAccept);
         btnCancel = (Button)findViewById(R.id.btnDecline);
@@ -99,21 +89,45 @@ public class CustomerCall extends AppCompatActivity {
 
         if(getIntent() != null)
         {
-            lat = getIntent().getDoubleExtra("lat",-1.0);
-            lng = getIntent().getDoubleExtra("lng",-1.0);
+            lat = getIntent().getStringExtra("lat");
+            lng = getIntent().getStringExtra("lng");
             customerId = getIntent().getStringExtra("customer");
 
             getDirection(lat,lng);
         }
+
+        startTimer();
+    }
+
+    private void startTimer() {
+        CountDownTimer countDownTimer = new CountDownTimer(30000,1000) {
+            @Override
+            public void onTick(long millisUntilFinished) {
+                txtCountDown.setText(String.valueOf(millisUntilFinished/1000));
+            }
+
+            @Override
+            public void onFinish() {
+                if(!TextUtils.isEmpty(customerId))
+                    cancelBooking(customerId);
+                else
+                    Toast.makeText(CustomerCall.this, "Customer ID Must be not Null", Toast.LENGTH_SHORT).show();
+            }
+        }.start();
     }
 
     private void cancelBooking(String customerId) {
         Token token = new Token(customerId);
 
-        Notification notification = new Notification("Request Canceled!","Driver has cancelled your request!");
-        Sender sender = new Sender(token.getToken(),notification);
+       /* Notification notification = new Notification("Request Canceled!","Driver has cancelled your request!");
+        Sender sender = new Sender(token.getToken(),notification);*/
 
-        mFCMService.sendMessage(sender)
+       Map<String,String> content = new HashMap<>();
+       content.put("title","Request Canceled!");
+       content.put("message","Driver has cancelled your request!");
+       DataMessage dataMessage = new DataMessage(token.getToken(),content);
+
+        mFCMService.sendMessage(dataMessage)
                 .enqueue(new Callback<FCMResponse>() {
                     @Override
                     public void onResponse(Call<FCMResponse> call, Response<FCMResponse> response) {
@@ -132,7 +146,7 @@ public class CustomerCall extends AppCompatActivity {
     }
 
 
-    private void getDirection(double lat, double lng) {
+    private void getDirection(String lat, String lng) {
 
         String requestApi = null;
 
@@ -198,19 +212,22 @@ public class CustomerCall extends AppCompatActivity {
 
     @Override
     protected void onStop() {
-        mediaPlayer.release();
+        if(mediaPlayer.isPlaying())
+            mediaPlayer.release();
         super.onStop();
     }
 
     @Override
     protected void onPause() {
-        mediaPlayer.release();
+        if(mediaPlayer.isPlaying())
+            mediaPlayer.pause();
         super.onPause();
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-        mediaPlayer.start();
+        if(mediaPlayer != null && !mediaPlayer.isPlaying())
+            mediaPlayer.start();
     }
 }

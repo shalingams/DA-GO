@@ -2,18 +2,26 @@ package com.sccodesoft.dagorider;
 
 import android.Manifest;
 import android.app.ProgressDialog;
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.content.res.Resources;
+import android.graphics.BitmapFactory;
 import android.location.Location;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
+import android.os.CountDownTimer;
+import android.os.Looper;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.design.widget.BottomSheetDialogFragment;
 import android.support.design.widget.NavigationView;
 import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.LocalBroadcastManager;
 import android.support.v4.view.GravityCompat;
 import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.ActionBarDrawerToggle;
@@ -31,16 +39,17 @@ import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.arsy.maps_library.MapRipple;
 import com.firebase.geofire.GeoFire;
 import com.firebase.geofire.GeoLocation;
 import com.firebase.geofire.GeoQuery;
 import com.firebase.geofire.GeoQueryEventListener;
-import com.google.android.gms.common.ConnectionResult;
-import com.google.android.gms.common.GooglePlayServicesUtil;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.common.api.Status;
-import com.google.android.gms.location.LocationListener;
+import com.google.android.gms.location.FusedLocationProviderClient;
+import com.google.android.gms.location.LocationCallback;
 import com.google.android.gms.location.LocationRequest;
+import com.google.android.gms.location.LocationResult;
 import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
@@ -52,15 +61,13 @@ import com.google.android.gms.maps.model.MapStyleOptions;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.tasks.OnCompleteListener;
+import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.gms.tasks.Task;
 import com.google.android.libraries.places.api.Places;
 import com.google.android.libraries.places.api.model.Place;
-import com.google.android.libraries.places.api.model.TypeFilter;
 import com.google.android.libraries.places.widget.AutocompleteSupportFragment;
 import com.google.android.libraries.places.widget.listener.PlaceSelectionListener;
-import com.google.firebase.auth.AuthCredential;
-import com.google.firebase.auth.EmailAuthProvider;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
@@ -68,18 +75,15 @@ import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
 import com.google.firebase.iid.FirebaseInstanceId;
+import com.google.firebase.iid.InstanceIdResult;
 import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.OnProgressListener;
 import com.google.firebase.storage.StorageReference;
 import com.google.firebase.storage.UploadTask;
-import com.google.gson.Gson;
 import com.rengwuxian.materialedittext.MaterialEditText;
 import com.sccodesoft.dagorider.Common.Common;
 import com.sccodesoft.dagorider.Helper.CustomInfoWindow;
-import com.sccodesoft.dagorider.Model.FCMResponse;
-import com.sccodesoft.dagorider.Model.Notification;
 import com.sccodesoft.dagorider.Model.Rider;
-import com.sccodesoft.dagorider.Model.Sender;
 import com.sccodesoft.dagorider.Model.Token;
 import com.sccodesoft.dagorider.Remote.IFCMServices;
 import com.squareup.picasso.Picasso;
@@ -93,22 +97,18 @@ import java.util.UUID;
 
 import de.hdodenhof.circleimageview.CircleImageView;
 import dmax.dialog.SpotsDialog;
-import io.paperdb.Paper;
-import retrofit2.Call;
-import retrofit2.Callback;
-import retrofit2.Response;
 
 public class Home extends AppCompatActivity
         implements NavigationView.OnNavigationItemSelectedListener,
         OnMapReadyCallback,
-        GoogleApiClient.ConnectionCallbacks,
-        GoogleApiClient.OnConnectionFailedListener,
-        LocationListener {
+        GoogleMap.OnInfoWindowClickListener, ValueEventListener {
 
     SupportMapFragment mapFragment;
     private AutocompleteSupportFragment place_location, place_destination;
     String mPlaceLocation,mPlaceDestination;
 
+    FusedLocationProviderClient fusedLocationProviderClient;
+    LocationCallback locationCallback;
 
     private GoogleMap mMap;
 
@@ -117,7 +117,6 @@ public class Home extends AppCompatActivity
 
     private LocationRequest mLocationRequest;
     private GoogleApiClient mGoogleApiClient;
-    private Location mLastLocation;
 
     private static int UPDATE_INTERVAL = 5000;
     private static int FASTEST_INTERVAL = 3000;
@@ -150,6 +149,29 @@ public class Home extends AppCompatActivity
 
     CircleImageView image_upload;
 
+    ImageView carDagoX,carDagoBlack;
+    boolean isDagoX=true;
+
+    //Map Animation
+    MapRipple mapRipple;
+
+    private BroadcastReceiver mCancelBroadCast = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            btnPickupRequest.setText("PICK UP REQUEST");
+
+            Common.driverId = "";
+            Common.isDriverFound=false;
+
+            btnPickupRequest.setEnabled(true);
+
+            if(mapRipple.isAnimationRunning())
+                mapRipple.stopRippleMapAnimation();
+
+            mUserMarker.hideInfoWindow();
+        }
+    };
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -157,9 +179,17 @@ public class Home extends AppCompatActivity
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
+        LocalBroadcastManager.getInstance(this)
+                .registerReceiver(mCancelBroadCast,new IntentFilter(Common.CANCEL_BROADCAST_STRING));
+
+        LocalBroadcastManager.getInstance(this)
+                .registerReceiver(mCancelBroadCast,new IntentFilter(Common.DROPOFF_BROADCAST_STRING));
+
         mService = Common.getFCMService();
         firebaseStorage = FirebaseStorage.getInstance();
         storageReference = firebaseStorage.getReference();
+
+        fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this);
 
         DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
         ActionBarDrawerToggle toggle = new ActionBarDrawerToggle(
@@ -174,6 +204,53 @@ public class Home extends AppCompatActivity
         TextView txtName = (TextView)navigationHeaderView.findViewById(R.id.txtDriverName);
         TextView txtStars = (TextView)navigationHeaderView.findViewById(R.id.txtStars);
         CircleImageView imageAvatar = (CircleImageView)navigationHeaderView.findViewById(R.id.image_avatar);
+
+        carDagoX = (ImageView)findViewById(R.id.select_dagoX);
+        carDagoBlack = (ImageView)findViewById(R.id.select_dagoBlack);
+
+        carDagoX.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                isDagoX=true;
+                if(isDagoX)
+                {
+                    carDagoX.setImageResource(R.drawable.dagocar_cui_select);
+                    carDagoBlack.setImageResource(R.drawable.dagocar_vip);
+                }
+                else
+                {
+                    carDagoX.setImageResource(R.drawable.dagocar_cui);
+                    carDagoBlack.setImageResource(R.drawable.dagocar_vip_select);
+                }
+                if(driversAvailabale != null)
+                    driversAvailabale.removeEventListener(Home.this);
+                driversAvailabale = FirebaseDatabase.getInstance().getReference(Common.driver_tbl).child(isDagoX?"DAGO X":"DAGO Black");
+                driversAvailabale.addValueEventListener(Home.this);
+                loadAllAvailabaleDriver(new LatLng(Common.mLastLocation.getLatitude(),Common.mLastLocation.getLongitude()));
+            }
+        });
+
+        carDagoBlack.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                isDagoX=false;
+                if(isDagoX)
+                {
+                    carDagoX.setImageResource(R.drawable.dagocar_cui_select);
+                    carDagoBlack.setImageResource(R.drawable.dagocar_vip);
+                }
+                else
+                {
+                    carDagoX.setImageResource(R.drawable.dagocar_cui);
+                    carDagoBlack.setImageResource(R.drawable.dagocar_vip_select);
+                }
+                if(driversAvailabale != null)
+                    driversAvailabale.removeEventListener(Home.this);
+                driversAvailabale = FirebaseDatabase.getInstance().getReference(Common.driver_tbl).child(isDagoX?"DAGO X":"DAGO Black");
+                driversAvailabale.addValueEventListener(Home.this);
+                loadAllAvailabaleDriver(new LatLng(Common.mLastLocation.getLatitude(),Common.mLastLocation.getLongitude()));
+            }
+        });
 
         txtName.setText(Common.currentUser.getName());
         txtStars.setText(Common.currentUser.getRates());
@@ -190,18 +267,18 @@ public class Home extends AppCompatActivity
         mapFragment = (SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
 
-        //Init View
-        imgExpandable = (ImageView)findViewById(R.id.imgExpandable);
-
 
         btnPickupRequest = (Button)findViewById(R.id.btnPickupRequest);
         btnPickupRequest.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if(!Common.isDriverFound)
+                if(!Common.isDriverFound) {
                     requestPickupHere(FirebaseAuth.getInstance().getCurrentUser().getUid());
-                else
-                    sendRequestToDriver(Common.driverId);
+                }
+                else {
+                    btnPickupRequest.setEnabled(false);
+                    Common.sendRequestToDriver(Common.driverId, mService, Home.this, Common.mLastLocation);
+                }
             }
         });
 
@@ -266,62 +343,40 @@ public class Home extends AppCompatActivity
 
     private void updateFirebaseToken() {
         FirebaseDatabase db = FirebaseDatabase.getInstance();
-        DatabaseReference tokens = db.getReference(Common.token_tbl);
+        final DatabaseReference tokens = db.getReference(Common.token_tbl);
 
-        Token token = new Token(FirebaseInstanceId.getInstance().getToken());
-        tokens.child(FirebaseAuth.getInstance().getCurrentUser().getUid())
-                .setValue(token);
-    }
-
-    private void sendRequestToDriver(String driverId) {
-        DatabaseReference tokens = FirebaseDatabase.getInstance().getReference(Common.token_tbl);
-
-        tokens.orderByKey().equalTo(driverId)
-                .addListenerForSingleValueEvent(new ValueEventListener() {
+        FirebaseInstanceId.getInstance()
+                .getInstanceId()
+                .addOnSuccessListener(new OnSuccessListener<InstanceIdResult>() {
                     @Override
-                    public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
-                        for(DataSnapshot postSnapShot:dataSnapshot.getChildren())
-                        {
-                            //Get token obj from db with key
-                            Token token = postSnapShot.getValue(Token.class);
-
-                            //Make raw payload convert LatLng to json
-                            String json_lat_lng = new Gson().toJson(new LatLng(mLastLocation.getLatitude(),mLastLocation.getLongitude()));
-
-                            String riderToken = FirebaseInstanceId.getInstance().getToken();
-                            Notification data = new Notification(riderToken,json_lat_lng);
-                            Sender content = new Sender(token.getToken(),data);
-
-                            mService.sendMessage(content)
-                                    .enqueue(new Callback<FCMResponse>() {
-                                        @Override
-                                        public void onResponse(Call<FCMResponse> call, Response<FCMResponse> response) {
-                                            if(response.body().success==1)
-                                                Toast.makeText(Home.this, "Request Sent!", Toast.LENGTH_SHORT).show();
-                                            else
-                                                Toast.makeText(Home.this, "Failed !", Toast.LENGTH_SHORT).show();
-                                        }
-
-                                        @Override
-                                        public void onFailure(Call<FCMResponse> call, Throwable t) {
-                                            Log.e("ERROR",t.getMessage());
-                                        }
-                                    });
-                        }
+                    public void onSuccess(InstanceIdResult instanceIdResult) {
+                        Token token = new Token(instanceIdResult.getToken());
+                        if(FirebaseAuth.getInstance().getCurrentUser() != null)
+                            tokens.child(FirebaseAuth.getInstance().getCurrentUser().getUid())
+                                    .setValue(token);
                     }
-
+                })
+                .addOnFailureListener(new OnFailureListener() {
                     @Override
-                    public void onCancelled(@NonNull DatabaseError databaseError) {
-
+                    public void onFailure(@NonNull Exception e) {
+                        Toast.makeText(Home.this, e.getMessage(), Toast.LENGTH_SHORT).show();
                     }
                 });
+
     }
+
 
     private void requestPickupHere(String uid)
     {
         DatabaseReference dbRequest = FirebaseDatabase.getInstance().getReference(Common.pickup_request_tbl);
         GeoFire mGeoFire = new GeoFire(dbRequest);
-        mGeoFire.setLocation(uid,new GeoLocation(mLastLocation.getLatitude(),mLastLocation.getLongitude()));
+        mGeoFire.setLocation(uid, new GeoLocation(Common.mLastLocation.getLatitude(), Common.mLastLocation.getLongitude()),
+                new GeoFire.CompletionListener() {
+                    @Override
+                    public void onComplete(String key, DatabaseError error) {
+
+                    }
+                });
 
         if(mUserMarker.isVisible())
             mUserMarker.remove();
@@ -330,10 +385,18 @@ public class Home extends AppCompatActivity
         mUserMarker = mMap.addMarker(new MarkerOptions()
                 .title("Pickup Here")
                 .snippet("")
-                .position(new LatLng(mLastLocation.getLatitude(),mLastLocation.getLongitude()))
-                .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED)));
+                .position(new LatLng(Common.mLastLocation.getLatitude(),Common.mLastLocation.getLongitude()))
+                .icon(BitmapDescriptorFactory.fromResource(R.drawable.marker)));
 
         mUserMarker.showInfoWindow();
+
+        mapRipple = new MapRipple(mMap,new LatLng(Common.mLastLocation.getLatitude(),Common.mLastLocation.getLongitude()),this);
+        mapRipple.withNumberOfRipples(1);
+        mapRipple.withDistance(500);
+        mapRipple.withRippleDuration(1000);
+        mapRipple.withTransparency(0.5f);
+
+        mapRipple.startRippleMapAnimation();
 
         btnPickupRequest.setText("Getting Your Driver...");
 
@@ -341,10 +404,15 @@ public class Home extends AppCompatActivity
     }
 
     private void findDriver() {
-        DatabaseReference drivers = FirebaseDatabase.getInstance().getReference(Common.driver_tbl);
-        GeoFire gfDrivers = new GeoFire(drivers);
+        DatabaseReference driverLocation;
+        if(isDagoX)
+            driverLocation = FirebaseDatabase.getInstance().getReference(Common.driver_tbl).child("DAGO X");
+        else
+            driverLocation = FirebaseDatabase.getInstance().getReference(Common.driver_tbl).child("DAGO Black");
 
-        final GeoQuery geoQuery = gfDrivers.queryAtLocation(new GeoLocation(mLastLocation.getLatitude(),mLastLocation.getLongitude()),radius);
+        GeoFire gfDrivers = new GeoFire(driverLocation);
+
+        final GeoQuery geoQuery = gfDrivers.queryAtLocation(new GeoLocation(Common.mLastLocation.getLatitude(),Common.mLastLocation.getLongitude()),radius);
         geoQuery.removeAllListeners();
         geoQuery.addGeoQueryEventListener(new GeoQueryEventListener() {
             @Override
@@ -382,7 +450,18 @@ public class Home extends AppCompatActivity
                 {
                     if(!Common.isDriverFound) {
                         Toast.makeText(Home.this, "No any available driver near your location..", Toast.LENGTH_SHORT).show();
-                        btnPickupRequest.setText("REQUEST PICKUP");
+
+                        btnPickupRequest.setText("PICK UP REQUEST");
+
+                        Common.driverId = "";
+
+                        btnPickupRequest.setEnabled(true);
+
+                        if(mapRipple.isAnimationRunning())
+                            mapRipple.stopRippleMapAnimation();
+
+                        mUserMarker.hideInfoWindow();
+
                         geoQuery.removeAllListeners();
                     }
                 }
@@ -398,22 +477,32 @@ public class Home extends AppCompatActivity
     private void setUpLocation()
     {
         if(ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED &&
-                ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED)
+                ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED &&
+                ActivityCompat.checkSelfPermission(this, Manifest.permission.CALL_PHONE) != PackageManager.PERMISSION_GRANTED)
         {
             ActivityCompat.requestPermissions(this,new String[]{
                     Manifest.permission.ACCESS_COARSE_LOCATION,
-                    Manifest.permission.ACCESS_FINE_LOCATION
+                    Manifest.permission.ACCESS_FINE_LOCATION,
+                    Manifest.permission.CALL_PHONE
             },MY_PERMISSION_REQUEST_CODE);
         }
         else
         {
-            if(checkPlayServices())
-            {
-                buildGoogleApiClient();
+                buildLocationCallBack();
                 createLocationRequest();
                 displayLocation();
-            }
         }
+    }
+
+    private void buildLocationCallBack() {
+        locationCallback = new LocationCallback()
+        {
+            @Override
+            public void onLocationResult(LocationResult locationResult) {
+                Common.mLastLocation = locationResult.getLocations().get(locationResult.getLocations().size()-1);
+                displayLocation();
+            }
+        };
     }
 
     @Override
@@ -423,12 +512,9 @@ public class Home extends AppCompatActivity
             case MY_PERMISSION_REQUEST_CODE:
                 if(grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED)
                 {
-                    if(checkPlayServices())
-                    {
-                        buildGoogleApiClient();
+                        buildLocationCallBack();
                         createLocationRequest();
                         displayLocation();
-                    }
                 }
                 break;
         }
@@ -443,31 +529,7 @@ public class Home extends AppCompatActivity
         mLocationRequest.setSmallestDisplacement(DISPLACEMENT);
     }
 
-    private void buildGoogleApiClient()
-    {
-        mGoogleApiClient = new GoogleApiClient.Builder(this)
-                .addConnectionCallbacks(this)
-                .addOnConnectionFailedListener(this)
-                .addApi(LocationServices.API)
-                .build();
-        mGoogleApiClient.connect();
-    }
 
-    private boolean checkPlayServices()
-    {
-        int resultCode = GooglePlayServicesUtil.isGooglePlayServicesAvailable(this);
-        if(resultCode != ConnectionResult.SUCCESS)
-        {
-            if(GooglePlayServicesUtil.isUserRecoverableError(resultCode))
-                GooglePlayServicesUtil.getErrorDialog(resultCode,this,PLAY_SERVICE_RES_REQUEST).show();
-            else {
-                Toast.makeText(this, "This Device is not supported", Toast.LENGTH_SHORT).show();
-                finish();
-            }
-            return false;
-        }
-        return true;
-    }
 
     private void displayLocation()
     {
@@ -476,33 +538,26 @@ public class Home extends AppCompatActivity
         {
             return;
         }
-        mLastLocation = LocationServices.FusedLocationApi.getLastLocation(mGoogleApiClient);
-        if(mLastLocation != null)
-        {
-            //Presense System
-            driversAvailabale = FirebaseDatabase.getInstance().getReference(Common.driver_tbl);
-            driversAvailabale.addValueEventListener(new ValueEventListener() {
-                @Override
-                public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
-                    loadAllAvailabaleDriver(new LatLng(mLastLocation.getLatitude(),mLastLocation.getLongitude()));
-                }
 
-                @Override
-                public void onCancelled(@NonNull DatabaseError databaseError) {
+       fusedLocationProviderClient.getLastLocation().addOnSuccessListener(new OnSuccessListener<Location>() {
+           @Override
+           public void onSuccess(Location location) {
+               Common.mLastLocation = location;
+               if(Common.mLastLocation != null)
+               {
+                   //Presense System
+                   driversAvailabale = FirebaseDatabase.getInstance().getReference(Common.driver_tbl).child(isDagoX?"DAGO X":"DAGO Black");
+                   driversAvailabale.addValueEventListener(Home.this);
 
-                }
-            });
+                   loadAllAvailabaleDriver(new LatLng(Common.mLastLocation.getLatitude(),Common.mLastLocation.getLongitude()));
 
-                final double latitude = mLastLocation.getLatitude();
-                final double longitude = mLastLocation.getLongitude();
-
-                loadAllAvailabaleDriver(new LatLng(mLastLocation.getLatitude(),mLastLocation.getLongitude()));
-
-            }
-            else
-            {
-                Log.d("ERROR","Can't Get Your Location");
-            }
+               }
+               else
+               {
+                   Log.d("ERROR","Can't Get Your Location");
+               }
+           }
+       });
 
     }
 
@@ -518,7 +573,12 @@ public class Home extends AppCompatActivity
 
 
         //Load all available drivers in distance 3km
-        DatabaseReference driverLocation = FirebaseDatabase.getInstance().getReference(Common.driver_tbl);
+        DatabaseReference driverLocation;
+        if(isDagoX)
+            driverLocation = FirebaseDatabase.getInstance().getReference(Common.driver_tbl).child("DAGO X");
+        else
+            driverLocation = FirebaseDatabase.getInstance().getReference(Common.driver_tbl).child("DAGO Black");
+
         GeoFire gf = new GeoFire(driverLocation);
 
         GeoQuery geoQuery = gf.queryAtLocation(new GeoLocation(location.latitude,location.longitude),distance);
@@ -535,13 +595,34 @@ public class Home extends AppCompatActivity
                                 //Rider and User has same properties so using rider model
                                 Rider rider = dataSnapshot.getValue(Rider.class);
 
-                                //On Map
-                                mMap.addMarker(new MarkerOptions()
+                                if(isDagoX)
+                                {
+                                    if(rider.getCarType().equals("DAGO X"))
+                                    {
+                                        //On Map
+                                        mMap.addMarker(new MarkerOptions()
                                                 .position(new LatLng(location.latitude,location.longitude))
                                                 .flat(true)
                                                 .title(rider.getName())
-                                                .snippet("Phone : "+rider.getPhone())
+                                                .snippet("Driver ID : "+dataSnapshot.getKey())
                                                 .icon(BitmapDescriptorFactory.fromResource(R.drawable.car)));
+                                    }
+                                }
+                                else
+                                {
+                                    if(rider.getCarType().equals("DAGO Black"))
+                                    {
+                                        //On Map
+                                        mMap.addMarker(new MarkerOptions()
+                                                .position(new LatLng(location.latitude,location.longitude))
+                                                .flat(true)
+                                                .title(rider.getName())
+                                                .snippet("Driver ID : "+dataSnapshot.getKey())
+                                                .icon(BitmapDescriptorFactory.fromResource(R.drawable.car)));
+                                    }
+                                }
+
+
                             }
 
                             @Override
@@ -621,8 +702,6 @@ public class Home extends AppCompatActivity
             signOut();
         } else if (id == R.id.nav_update_info) {
             showDialogUpdateInfo();
-        } else if (id == R.id.nav_change_password) {
-            showDialogChangePwd();
         }
 
         DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
@@ -643,7 +722,7 @@ public class Home extends AppCompatActivity
         image_upload = layout_updateInfo.findViewById(R.id.image_upload);
 
         edtName.setText(Common.currentUser.getName());
-        edtPhone.setText(Common.currentUser.getEmail());
+        edtPhone.setText(Common.currentUser.getPhone());
         if(Common.currentUser.getAvatarUrl() != null &&
                 !TextUtils.isEmpty(Common.currentUser.getAvatarUrl()))
         {
@@ -785,7 +864,7 @@ public class Home extends AppCompatActivity
                             @Override
                             public void onProgress(UploadTask.TaskSnapshot taskSnapshot) {
                                 double progress = (100.0*taskSnapshot.getBytesTransferred()/taskSnapshot.getTotalByteCount());
-                                mDialog.setMessage("Uploading "+progress+"%");
+                                mDialog.setMessage("Uploading..");
                             }
                         });
             }
@@ -795,120 +874,32 @@ public class Home extends AppCompatActivity
 
 
     private void signOut() {
+        AlertDialog.Builder builder;
+        if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP)
+            builder = new AlertDialog.Builder(this,android.R.style.Theme_Material_Dialog_Alert);
+        else
+            builder = new AlertDialog.Builder(this);
 
-        Paper.init(this);
-        Paper.book().destroy();
-
-        FirebaseAuth.getInstance().signOut();
-        Intent intent = new Intent(Home.this,MainActivity.class);
-        startActivity(intent);
-        finish();
+        builder.setMessage("Do You Want To Sign Out?")
+                .setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        FirebaseAuth.getInstance().signOut();
+                        Intent intent = new Intent(Home.this,MainActivity.class);
+                        startActivity(intent);
+                        finish();
+                    }
+                })
+                .setNegativeButton(android.R.string.cancel, new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        dialog.dismiss();
+                    }
+                });
+        builder.show();
     }
 
-    private void showDialogChangePwd() {
-        AlertDialog.Builder alertDialog = new AlertDialog.Builder(this);
-        alertDialog.setTitle("CHANGE PASSWORD");
-        alertDialog.setMessage("Please enter details");
 
-        LayoutInflater inflater = LayoutInflater.from(this);
-        View layout_pwd = inflater.inflate(R.layout.layout_change_password,null);
-
-        final MaterialEditText edtPassword = layout_pwd.findViewById(R.id.edtPassword);
-        final MaterialEditText edtNewPassword = layout_pwd.findViewById(R.id.edtNewPassword);
-        final MaterialEditText edtConfPassword = layout_pwd.findViewById(R.id.edtConfNewPassword);
-
-        alertDialog.setView(layout_pwd);
-
-        alertDialog.setPositiveButton("CHANGE PASSWORD", new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialogInterface, int which) {
-                dialogInterface.dismiss();
-
-                if(TextUtils.isEmpty(edtPassword.getText().toString()))
-                {
-                    Toast.makeText(Home.this, "Please Enter Current Password..", Toast.LENGTH_SHORT).show();
-                    return;
-                }
-                else if(TextUtils.isEmpty(edtNewPassword.getText().toString()))
-                {
-                    Toast.makeText(Home.this, "Please Enter New Password..", Toast.LENGTH_SHORT).show();
-                    return;
-                }
-                else if(edtConfPassword.getText().toString().length()<6)
-                {
-                    Toast.makeText(Home.this, "Please Confirm New Password..", Toast.LENGTH_SHORT).show();
-                    return;
-                }
-                else if(edtNewPassword.getText().toString().equals(edtConfPassword.getText().toString())) {
-
-                    final SpotsDialog waitingDialog = new SpotsDialog(Home.this);
-                    waitingDialog.show();
-
-                    String email = FirebaseAuth.getInstance().getCurrentUser().getEmail();
-
-                    AuthCredential credential = EmailAuthProvider.getCredential(email, edtPassword.getText().toString());
-
-                    FirebaseAuth.getInstance().getCurrentUser()
-                            .reauthenticate(credential)
-                            .addOnCompleteListener(new OnCompleteListener<Void>() {
-                                @Override
-                                public void onComplete(@NonNull Task<Void> task) {
-                                    if (task.isSuccessful()) {
-                                        FirebaseAuth.getInstance().getCurrentUser()
-                                                .updatePassword(edtNewPassword.getText().toString())
-                                                .addOnCompleteListener(new OnCompleteListener<Void>() {
-                                                    @Override
-                                                    public void onComplete(@NonNull Task<Void> task) {
-                                                        if (task.isSuccessful()) {
-                                                            Map<String, Object> password = new HashMap<>();
-                                                            password.put("password", edtNewPassword.getText().toString());
-
-                                                            DatabaseReference riderInfomation = FirebaseDatabase.getInstance().getReference(Common.user_rider_tbl);
-
-                                                            riderInfomation.child(FirebaseAuth.getInstance().getCurrentUser().getUid())
-                                                                    .updateChildren(password)
-                                                                    .addOnCompleteListener(new OnCompleteListener<Void>() {
-                                                                        @Override
-                                                                        public void onComplete(@NonNull Task<Void> task) {
-                                                                            if (task.isSuccessful()) {
-                                                                                waitingDialog.dismiss();
-                                                                                Toast.makeText(Home.this, "Your Password Changed Successfully..", Toast.LENGTH_SHORT).show();
-                                                                            } else {
-                                                                                waitingDialog.dismiss();
-                                                                                Toast.makeText(Home.this, "Password Changed But Couldn't Update Driver Information..", Toast.LENGTH_SHORT).show();
-                                                                            }
-                                                                        }
-                                                                    });
-                                                        } else {
-                                                            waitingDialog.dismiss();
-                                                            Toast.makeText(Home.this, "Error Occured While Changing Password..", Toast.LENGTH_SHORT).show();
-                                                        }
-                                                    }
-                                                });
-                                    } else {
-                                        waitingDialog.dismiss();
-                                        Toast.makeText(Home.this, "Current Password Not Correct", Toast.LENGTH_SHORT).show();
-                                    }
-
-                                }
-                            });
-                }
-            }
-
-
-        });
-
-        alertDialog.setNegativeButton("CANCEL",   new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialogInterface, int which) {
-                dialogInterface.dismiss();
-            }
-        });
-
-        alertDialog.show();
-
-
-    }
 
     @Override
     public void onMapReady(GoogleMap googleMap) {
@@ -941,41 +932,54 @@ public class Home extends AppCompatActivity
                                             .title("Destination"));
                 mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng,15.0f));
 
-                BottomSheetDialogFragment mBottomSheet = BottomSheetRiderFragment.newInstance(String.format("%f,%f",mLastLocation.getLatitude(),mLastLocation.getLongitude())
+                BottomSheetDialogFragment mBottomSheet = BottomSheetRiderFragment.newInstance(String.format("%f,%f",Common.mLastLocation.getLatitude(),Common.mLastLocation.getLongitude())
                                                             ,String.format("%f,%f",latLng.latitude,latLng.longitude),true);
                 mBottomSheet.show(getSupportFragmentManager(),mBottomSheet.getTag());
             }
         });
-    }
 
-    @Override
-    public void onConnected(@Nullable Bundle bundle) {
-        displayLocation();
-        startLocationUpdates();
-    }
+        mMap.setOnInfoWindowClickListener(this);
 
-    private void startLocationUpdates() {
         if(ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED &&
                 ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED)
         {
             return;
         }
-        LocationServices.FusedLocationApi.requestLocationUpdates(mGoogleApiClient,mLocationRequest,this);
+        fusedLocationProviderClient.requestLocationUpdates(mLocationRequest,locationCallback,Looper.myLooper());
+    }
+
+
+    @Override
+    public void onInfoWindowClick(Marker marker) {
+
+        if(!marker.getTitle().equals("You"))
+        {
+            Intent intent = new Intent(Home.this,CallDriver.class);
+            String driveridc =marker.getSnippet().substring(12);
+            Log.i("DRRRRRR",driveridc);
+            Log.i("DRRRRRo",marker.getSnippet());
+            intent.putExtra("driverId",driveridc);
+            intent.putExtra("lat",Common.mLastLocation.getLatitude());
+            intent.putExtra("lng",Common.mLastLocation.getLongitude());
+
+            startActivity(intent);
+        }
+
     }
 
     @Override
-    public void onConnectionSuspended(int i) {
-        mGoogleApiClient.connect();
+    public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
+        loadAllAvailabaleDriver(new LatLng(Common.mLastLocation.getLatitude(),Common.mLastLocation.getLongitude()));
     }
 
     @Override
-    public void onConnectionFailed(@NonNull ConnectionResult connectionResult) {
+    public void onCancelled(@NonNull DatabaseError databaseError) {
 
     }
 
     @Override
-    public void onLocationChanged(Location location) {
-        mLastLocation = location;
-        displayLocation();
+    protected void onDestroy() {
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(mCancelBroadCast);
+        super.onDestroy();
     }
 }

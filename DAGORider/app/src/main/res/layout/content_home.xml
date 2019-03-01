@@ -24,14 +24,32 @@
         <RelativeLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content">
-            <ImageView
-                android:id="@+id/imgExpandable"
-                android:layout_alignParentRight="true"
-                android:src="@drawable/ic_keyboard_arrow_up_black_24dp"
+
+            <LinearLayout
+                android:layout_marginTop="4dp"
+                android:layout_marginBottom="4dp"
+                android:layout_centerHorizontal="true"
+                android:orientation="horizontal"
+                android:id="@+id/select_carType"
                 android:layout_width="wrap_content"
-                android:layout_height="wrap_content" />
+                android:layout_height="wrap_content">
+                
+                <ImageView
+                    android:id="@+id/select_dagoX"
+                    android:layout_marginRight="8dp"
+                    android:src="@drawable/dagocar_cui_select"
+                    android:layout_width="60dp"
+                    android:layout_height="60dp" />
+                <ImageView
+                    android:id="@+id/select_dagoBlack"
+                    android:layout_marginLeft="8dp"
+                    android:src="@drawable/dagocar_vip"
+                    android:layout_width="60dp"
+                    android:layout_height="60dp" />
+
+            </LinearLayout>
             <Button
-                android:layout_below="@id/imgExpandable"
+                android:layout_below="@id/select_carType"
                 android:id="@+id/btnPickupRequest"
                 android:background="@drawable/btn_sign_in_background"
                 android:textColor="@android:color/white"

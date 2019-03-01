@@ -2,7 +2,7 @@ package com.sccodesoft.dago.Common;
 
 import android.location.Location;
 
-import com.sccodesoft.dago.Model.User;
+import com.sccodesoft.dago.Model.Driver;
 import com.sccodesoft.dago.Remote.FCMClient;
 import com.sccodesoft.dago.Remote.IFCMServices;
 import com.sccodesoft.dago.Remote.IGoogleApi;
@@ -18,7 +18,7 @@ public class Common
 
     public static final int PICK_IMAGE_REQUEST = 9999;
 
-    public static User currentUser;
+    public static Driver currentDriver;
 
     public static Location mLastLocation=null;
 

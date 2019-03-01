@@ -1,10 +1,33 @@
 package com.sccodesoft.dagorider.Common;
 
+import android.content.Context;
+import android.location.Location;
+import android.support.annotation.NonNull;
+import android.util.Log;
+import android.widget.Toast;
+
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.ValueEventListener;
+import com.google.firebase.iid.FirebaseInstanceId;
+import com.sccodesoft.dagorider.Home;
+import com.sccodesoft.dagorider.Model.DataMessage;
+import com.sccodesoft.dagorider.Model.FCMResponse;
 import com.sccodesoft.dagorider.Model.Rider;
+import com.sccodesoft.dagorider.Model.Token;
 import com.sccodesoft.dagorider.Remote.FCMClient;
 import com.sccodesoft.dagorider.Remote.GoogleMapAPI;
 import com.sccodesoft.dagorider.Remote.IFCMServices;
 import com.sccodesoft.dagorider.Remote.IGoogleAPI;
+
+import java.util.HashMap;
+import java.util.Map;
+
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
 
 public class Common {
 
@@ -14,7 +37,12 @@ public class Common {
 
     public static Rider currentUser = new Rider();
 
+    public static final String CANCEL_BROADCAST_STRING = "cancel_pickup";
+    public static final String DROPOFF_BROADCAST_STRING = "drop_off";
+
     public static final int PICK_IMAGE_REQUEST = 9999;
+
+    public static Location mLastLocation;
 
     public static final String driver_tbl = "Drivers";
     public static final String user_driver_tbl = "DriversInformation";
@@ -46,5 +74,54 @@ public class Common {
     public static IGoogleAPI getGoogleService()
     {
         return GoogleMapAPI.getClient(googleAPIUrl).create(IGoogleAPI.class);
+    }
+
+    public static void sendRequestToDriver(String driverId, final IFCMServices mService,final Context context,final Location currentLocation) {
+        DatabaseReference tokens = FirebaseDatabase.getInstance().getReference(Common.token_tbl);
+
+        tokens.orderByKey().equalTo(driverId)
+                .addListenerForSingleValueEvent(new ValueEventListener() {
+                    @Override
+                    public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
+                        for(DataSnapshot postSnapShot:dataSnapshot.getChildren())
+                        {
+                            //Get token obj from db with key
+                            Token token = postSnapShot.getValue(Token.class);
+
+
+                            String riderToken = FirebaseInstanceId.getInstance().getToken();
+                            /*Notification data = new Notification(riderToken,json_lat_lng);
+                            Sender content = new Sender(token.getToken(),data);*/
+
+                            Map<String,String> content = new HashMap<>();
+                            content.put("customer",riderToken);
+                            content.put("lat",String.valueOf(currentLocation.getLatitude()));
+                            content.put("lng",String.valueOf(currentLocation.getLongitude()));
+                            DataMessage dataMessage = new DataMessage(token.getToken(),content);
+
+
+                            mService.sendMessage(dataMessage)
+                                    .enqueue(new Callback<FCMResponse>() {
+                                        @Override
+                                        public void onResponse(Call<FCMResponse> call, Response<FCMResponse> response) {
+                                            if(response.body().success==1)
+                                                Toast.makeText(context, "Request Sent!", Toast.LENGTH_SHORT).show();
+                                            else
+                                                Toast.makeText(context, "Failed !", Toast.LENGTH_SHORT).show();
+                                        }
+
+                                        @Override
+                                        public void onFailure(Call<FCMResponse> call, Throwable t) {
+                                            Log.e("ERROR",t.getMessage());
+                                        }
+                                    });
+                        }
+                    }
+
+                    @Override
+                    public void onCancelled(@NonNull DatabaseError databaseError) {
+
+                    }
+                });
     }
 }

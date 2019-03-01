@@ -9,10 +9,6 @@
             android:icon="@drawable/ic_account_box_black_24dp"
             android:title="Update Information" />
         <item
-            android:id="@+id/nav_change_password"
-            android:icon="@drawable/ic_verified_user_black_24dp"
-            android:title="Change Password" />
-        <item
             android:id="@+id/nav_sign_out"
             android:icon="@drawable/ic_exit_to_app_black_24dp"
             android:title="Sign Out" />

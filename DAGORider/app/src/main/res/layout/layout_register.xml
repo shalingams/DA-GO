@@ -11,54 +11,6 @@
         android:layout_margin="10dp"
         android:layout_width="match_parent"
         android:layout_height="wrap_content">
-        
-        <com.rengwuxian.materialedittext.MaterialEditText
-            android:id="@+id/edtEmail"
-            android:hint="Email"
-            android:inputType="textEmailAddress"
-            android:text=""
-            android:textColor="@color/colorPrimary"
-            android:textColorHint="@color/colorPrimary"
-            android:textSize="20sp"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-
-            app:met_singleLineEllipsis="true"
-            app:met_baseColor="@color/colorPrimary"
-            app:met_floatingLabel="highlight"
-            app:met_primaryColor="@color/colorPrimary"/>
-
-        <com.rengwuxian.materialedittext.MaterialEditText
-            android:id="@+id/edtPassword"
-            android:hint="Password"
-            android:inputType="textPassword"
-            android:text=""
-            android:textColor="@color/colorPrimary"
-            android:textColorHint="@color/colorPrimary"
-            android:textSize="20sp"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-
-            app:met_singleLineEllipsis="true"
-            app:met_baseColor="@color/colorPrimary"
-            app:met_floatingLabel="highlight"
-            app:met_primaryColor="@color/colorPrimary"/>
-
-        <com.rengwuxian.materialedittext.MaterialEditText
-            android:id="@+id/edtConfirmPassword"
-            android:hint="Confirm Password"
-            android:inputType="textPassword"
-            android:text=""
-            android:textColor="@color/colorPrimary"
-            android:textColorHint="@color/colorPrimary"
-            android:textSize="20sp"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-
-            app:met_singleLineEllipsis="true"
-            app:met_baseColor="@color/colorPrimary"
-            app:met_floatingLabel="highlight"
-            app:met_primaryColor="@color/colorPrimary"/>
 
         <com.rengwuxian.materialedittext.MaterialEditText
             android:id="@+id/edtName"
@@ -91,7 +43,15 @@
             app:met_baseColor="@color/colorPrimary"
             app:met_floatingLabel="highlight"
             app:met_primaryColor="@color/colorPrimary"/>
-        
+
+        <de.hdodenhof.circleimageview.CircleImageView
+            android:id="@+id/image_upload"
+            android:layout_width="100dp"
+            android:layout_height="100dp"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginTop="5dp"
+            android:src="@drawable/add_100px" />
+
     </LinearLayout>
 
 

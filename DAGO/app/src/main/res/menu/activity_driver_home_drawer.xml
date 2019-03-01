@@ -5,25 +5,13 @@
 
     <group android:checkableBehavior="single">
         <item
-            android:id="@+id/nav_trip_history"
-            android:title="Trip History" />
-        <item
-            android:id="@+id/nav_waybill"
-            android:title="Waybill" />
-        <item
             android:id="@+id/nav_update_info"
             android:icon="@drawable/ic_account_box_black_24dp"
             android:title="Update Information" />
         <item
-            android:id="@+id/nav_change_password"
-            android:icon="@drawable/ic_verified_user_black_24dp"
-            android:title="Change Password" />
-        <item
-            android:id="@+id/nav_help"
-            android:title="Help" />
-        <item
-            android:id="@+id/nav_settings"
-            android:title="Settings" />
+            android:id="@+id/nav_update_carType"
+            android:icon="@drawable/ic_directions_car_black_24dp"
+            android:title="Update Car Type" />
         <item
             android:id="@+id/nav_sign_out"
             android:icon="@drawable/ic_exit_to_app_black_24dp"

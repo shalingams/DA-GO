@@ -1,66 +1,94 @@
 package com.sccodesoft.dago;
 
-import android.content.Context;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.support.annotation.NonNull;
-import android.support.design.widget.Snackbar;
-import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
-import android.text.TextUtils;
-import android.view.LayoutInflater;
-import android.view.MotionEvent;
 import android.view.View;
 import android.widget.Button;
 import android.widget.RelativeLayout;
-import android.widget.TextView;
 import android.widget.Toast;
 
-import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
-import com.google.android.gms.tasks.Task;
-import com.google.firebase.auth.AuthResult;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
-import com.rengwuxian.materialedittext.MaterialEditText;
+import com.google.firebase.iid.FirebaseInstanceId;
+import com.google.firebase.iid.InstanceIdResult;
 import com.sccodesoft.dago.Common.Common;
-import com.sccodesoft.dago.Model.User;
+import com.sccodesoft.dago.Model.Driver;
+import com.sccodesoft.dago.Model.Token;
 
-import dmax.dialog.SpotsDialog;
 import io.paperdb.Paper;
-import uk.co.chrisjenx.calligraphy.CalligraphyConfig;
-import uk.co.chrisjenx.calligraphy.CalligraphyContextWrapper;
 
 
 public class MainActivity extends AppCompatActivity {
 
-    Button btnSignIn,btnRegister;
+    Button btnContinue;
     RelativeLayout rootLayout;
 
     FirebaseAuth auth;
     FirebaseDatabase db;
     DatabaseReference users;
 
-    TextView txtForgotPwd;
+    FirebaseUser currentuser;
 
-    @Override
+
+   /* @Override
     protected void attachBaseContext(Context newBase) {
         super.attachBaseContext(CalligraphyContextWrapper.wrap(newBase));
+    }*/
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+
+        if(currentuser != null)
+        {
+            loginUser();
+        }
+    }
+
+    private void loginUser() {
+        FirebaseDatabase.getInstance().getReference(Common.user_driver_tbl)
+                .child(FirebaseAuth.getInstance().getCurrentUser().getUid())
+                .addListenerForSingleValueEvent(new ValueEventListener() {
+                    @Override
+                    public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
+                        if(dataSnapshot.exists()) {
+                            Common.currentDriver = dataSnapshot.getValue(Driver.class);
+
+                            updateTokenToServer();
+
+                            startActivity(new Intent(MainActivity.this, DriverHome.class));
+                            finish();
+                        }
+                        else
+                        {
+                            Toast.makeText(MainActivity.this, "Click On Continue..", Toast.LENGTH_SHORT).show();                              
+                        }
+                    }
+
+                    @Override
+                    public void onCancelled(@NonNull DatabaseError databaseError) {
+                        Toast.makeText(MainActivity.this, "Cancelled..", Toast.LENGTH_SHORT).show();
+                    }
+                });
+
     }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        CalligraphyConfig.initDefault(new CalligraphyConfig.Builder()
+      /*  CalligraphyConfig.initDefault(new CalligraphyConfig.Builder()
                                             .setDefaultFontPath("fonts/Arkhip_font.ttf")
                                             .setFontAttrId(R.attr.fontPath)
-                                            .build());
+                                            .build());*/
         setContentView(R.layout.activity_main);
 
         Paper.init(this);
@@ -69,33 +97,21 @@ public class MainActivity extends AppCompatActivity {
         db = FirebaseDatabase.getInstance();
         users = db.getReference(Common.user_driver_tbl);
 
-        btnRegister = (Button)findViewById(R.id.btnRegister);
-        btnSignIn = (Button)findViewById(R.id.btnSignIn);
+        currentuser = FirebaseAuth.getInstance().getCurrentUser();
+
+        btnContinue = (Button)findViewById(R.id.btnContinue);
         rootLayout = (RelativeLayout)findViewById(R.id.rootLayout);
-        txtForgotPwd = (TextView)findViewById(R.id.txt_forgot_password);
-        txtForgotPwd.setOnTouchListener(new View.OnTouchListener() {
-            @Override
-            public boolean onTouch(View v, MotionEvent event) {
-                showDialogForgotPwd();
-                return false;
-            }
-        });
 
-        btnRegister.setOnClickListener(new View.OnClickListener() {
+
+        btnContinue.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                showRegisterDialog();
+                signInWithPhone();
             }
         });
 
-        btnSignIn.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                showLoginDialog();
-            }
-        });
 
-        //Auto Login
+       /* //Auto Login
         String user = Paper.book().read(Common.user_field);
         String pwd = Paper.book().read(Common.pwd_field);
 
@@ -106,10 +122,39 @@ public class MainActivity extends AppCompatActivity {
             {
                 autoLogin(user,pwd);
             }
-        }
+        }*/
     }
 
-    private void autoLogin(String user, String pwd) {
+    private void signInWithPhone() {
+        Intent intent = new Intent(MainActivity.this,PhoneLogin.class);
+        startActivity(intent);
+    }
+
+    private void updateTokenToServer() {
+        FirebaseDatabase db = FirebaseDatabase.getInstance();
+        final DatabaseReference tokens = db.getReference(Common.token_tbl);
+
+        FirebaseInstanceId.getInstance()
+                .getInstanceId()
+                .addOnSuccessListener(new OnSuccessListener<InstanceIdResult>() {
+                    @Override
+                    public void onSuccess(InstanceIdResult instanceIdResult) {
+                            Token token = new Token(instanceIdResult.getToken());
+                            if(FirebaseAuth.getInstance().getCurrentUser() != null)
+                                tokens.child(FirebaseAuth.getInstance().getCurrentUser().getUid())
+                                        .setValue(token);
+                    }
+                })
+        .addOnFailureListener(new OnFailureListener() {
+            @Override
+            public void onFailure(@NonNull Exception e) {
+                Toast.makeText(MainActivity.this, e.getMessage(), Toast.LENGTH_SHORT).show();
+            }
+        });
+
+    }
+
+   /* private void autoLogin(String user, String pwd) {
         final SpotsDialog waitingDialog = new SpotsDialog(MainActivity.this);
         waitingDialog.show();
         btnSignIn.setEnabled(false);
@@ -126,7 +171,7 @@ public class MainActivity extends AppCompatActivity {
                                     @Override
                                     public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
                                         if(dataSnapshot.exists()) {
-                                            Common.currentUser = dataSnapshot.getValue(User.class);
+                                            Common.currentDriver = dataSnapshot.getValue(Driver.class);
 
                                             startActivity(new Intent(MainActivity.this, DriverHome.class));
                                             finish();
@@ -152,9 +197,9 @@ public class MainActivity extends AppCompatActivity {
                         btnSignIn.setEnabled(true);
                     }
                 });
-    }
+    }*/
 
-    private void showDialogForgotPwd() {
+   /* private void showDialogForgotPwd() {
         AlertDialog.Builder alertDialog = new AlertDialog.Builder(this);
         alertDialog.setTitle("RESET PASSWORD");
         alertDialog.setMessage("Please enter your email address");
@@ -256,7 +301,7 @@ public class MainActivity extends AppCompatActivity {
                                                 @Override
                                                 public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
                                                     if(dataSnapshot.exists()) {
-                                                        Common.currentUser = dataSnapshot.getValue(User.class);
+                                                        Common.currentDriver = dataSnapshot.getValue(Driver.class);
 
                                                         Paper.book().write(Common.user_field, edtEmail.getText().toString());
                                                         Paper.book().write(Common.pwd_field, edtPassword.getText().toString());
@@ -358,7 +403,7 @@ public class MainActivity extends AppCompatActivity {
                             .addOnSuccessListener(new OnSuccessListener<AuthResult>() {
                                 @Override
                                 public void onSuccess(AuthResult authResult) {
-                                    User user = new User();
+                                    Driver user = new Driver();
                                     user.setEmail(edtEmail.getText().toString());
                                     user.setName(edtName.getText().toString());
                                     user.setPhone(edtPhone.getText().toString());
@@ -370,7 +415,7 @@ public class MainActivity extends AppCompatActivity {
                                                 @Override
                                                 public void onSuccess(Void aVoid) {
                                                     waitingDialog.dismiss();
-                                                    Snackbar.make(rootLayout,"User Registered Successfully !!",Snackbar.LENGTH_SHORT).show();
+                                                    Snackbar.make(rootLayout,"Driver Registered Successfully !!",Snackbar.LENGTH_SHORT).show();
                                                 }
                                             })
                                             .addOnFailureListener(new OnFailureListener() {
@@ -401,7 +446,7 @@ public class MainActivity extends AppCompatActivity {
         });
 
         dialog.show();
-    }
+    }*/
 
 
 }

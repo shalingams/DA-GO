@@ -1,34 +1,17 @@
 package com.sccodesoft.dagorider.Model;
 
 public class Rider {
-    private String email,password,name,phone,avatarUrl,rates;
+    private String name,phone,avatarUrl,rates,carType;
 
     public Rider() {
     }
 
-    public Rider(String email, String password, String name, String phone, String avatarUrl, String rates) {
-        this.email = email;
-        this.password = password;
+    public Rider(String name, String phone, String avatarUrl, String rates, String carType) {
         this.name = name;
         this.phone = phone;
         this.avatarUrl = avatarUrl;
         this.rates = rates;
-    }
-
-    public String getEmail() {
-        return email;
-    }
-
-    public void setEmail(String email) {
-        this.email = email;
-    }
-
-    public String getPassword() {
-        return password;
-    }
-
-    public void setPassword(String password) {
-        this.password = password;
+        this.carType = carType;
     }
 
     public String getName() {
@@ -61,5 +44,13 @@ public class Rider {
 
     public void setRates(String rates) {
         this.rates = rates;
+    }
+
+    public String getCarType() {
+        return carType;
+    }
+
+    public void setCarType(String carType) {
+        this.carType = carType;
     }
 }

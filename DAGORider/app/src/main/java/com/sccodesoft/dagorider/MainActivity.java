@@ -15,6 +15,7 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.OnFailureListener;
@@ -22,6 +23,7 @@ import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.gms.tasks.Task;
 import com.google.firebase.auth.AuthResult;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
@@ -39,7 +41,7 @@ import uk.co.chrisjenx.calligraphy.CalligraphyContextWrapper;
 
 public class MainActivity extends AppCompatActivity {
 
-    Button btnSignIn,btnRegister;
+    Button btnContinue;
     RelativeLayout rootLayout;
 
     FirebaseAuth auth;
@@ -48,69 +50,93 @@ public class MainActivity extends AppCompatActivity {
 
     TextView txtForgotPwd;
 
-    @Override
+    FirebaseUser currentuser;
+
+    SpotsDialog waitingDialog;
+
+   /* @Override
     protected void attachBaseContext(Context newBase) {
         super.attachBaseContext(CalligraphyContextWrapper.wrap(newBase));
+    }*/
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+
+        if(currentuser != null)
+        {
+            waitingDialog = new SpotsDialog(MainActivity.this);
+            waitingDialog.show();
+
+            btnContinue.setEnabled(false);
+            loginUser();
+        }
+    }
+
+    private void loginUser() {
+        FirebaseDatabase.getInstance().getReference(Common.user_rider_tbl)
+                .child(FirebaseAuth.getInstance().getCurrentUser().getUid())
+                .addListenerForSingleValueEvent(new ValueEventListener() {
+                    @Override
+                    public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
+                        if(dataSnapshot.exists()) {
+                            Common.currentUser = dataSnapshot.getValue(Rider.class);
+
+                            startActivity(new Intent(MainActivity.this, Home.class));
+                            waitingDialog.dismiss();
+                            finish();
+                        }
+                        else
+                        {
+                            btnContinue.setEnabled(true);
+                            waitingDialog.dismiss();
+                            Toast.makeText(MainActivity.this, "Click On Continue..", Toast.LENGTH_SHORT).show();
+                        }
+                    }
+
+                    @Override
+                    public void onCancelled(@NonNull DatabaseError databaseError) {
+                        waitingDialog.dismiss();
+                        Toast.makeText(MainActivity.this, "Cancelled..", Toast.LENGTH_SHORT).show();
+                    }
+                });
+
     }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        CalligraphyConfig.initDefault(new CalligraphyConfig.Builder()
+       /* CalligraphyConfig.initDefault(new CalligraphyConfig.Builder()
                 .setDefaultFontPath("fonts/Arkhip_font.ttf")
                 .setFontAttrId(R.attr.fontPath)
-                .build());
+                .build());*/
         setContentView(R.layout.activity_main);
 
-        Paper.init(this);
 
         auth = FirebaseAuth.getInstance();
         db = FirebaseDatabase.getInstance();
         users = db.getReference(Common.user_rider_tbl);
 
-        btnRegister = (Button)findViewById(R.id.btnRegister);
-        btnSignIn = (Button)findViewById(R.id.btnSignIn);
+        currentuser = FirebaseAuth.getInstance().getCurrentUser();
+
+        btnContinue = (Button)findViewById(R.id.btnContinue);
+
         rootLayout = (RelativeLayout)findViewById(R.id.rootLayout);
-        txtForgotPwd = (TextView)findViewById(R.id.txt_forgot_password);
-        txtForgotPwd.setOnTouchListener(new View.OnTouchListener() {
-            @Override
-            public boolean onTouch(View v, MotionEvent event) {
-                showDialogForgotPwd();
-                return false;
-            }
-        });
 
-        btnRegister.setOnClickListener(new View.OnClickListener() {
+        btnContinue.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                showRegisterDialog();
+                signInWithPhone();
             }
         });
-
-        btnSignIn.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                showLoginDialog();
-            }
-        });
-
-
-        //Auto Login
-        String user = Paper.book().read(Common.user_field);
-        String pwd = Paper.book().read(Common.pwd_field);
-
-        if(user != null && pwd != null)
-        {
-            if(!TextUtils.isEmpty(user) &&
-                    !TextUtils.isEmpty(pwd))
-            {
-                autoLogin(user,pwd);
-            }
-        }
-
     }
 
-    private void autoLogin(String user, String pwd) {
+    private void signInWithPhone() {
+        Intent intent = new Intent(MainActivity.this,PhoneLogin.class);
+        startActivity(intent);
+    }
+
+   /* private void autoLogin(String user, String pwd) {
         final SpotsDialog waitingDialog = new SpotsDialog(MainActivity.this);
         waitingDialog.show();
         btnSignIn.setEnabled(false);
@@ -153,8 +179,8 @@ public class MainActivity extends AppCompatActivity {
                     }
                 });
     }
-
-    private void showDialogForgotPwd() {
+*/
+    /*private void showDialogForgotPwd() {
         AlertDialog.Builder alertDialog = new AlertDialog.Builder(this);
         alertDialog.setTitle("RESET PASSWORD");
         alertDialog.setMessage("Please enter your email address");
@@ -404,7 +430,7 @@ public class MainActivity extends AppCompatActivity {
         });
 
         dialog.show();
-    }
+    }*/
 
 
 }

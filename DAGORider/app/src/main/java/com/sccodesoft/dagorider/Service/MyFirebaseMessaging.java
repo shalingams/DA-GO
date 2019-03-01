@@ -12,38 +12,67 @@ import android.os.Handler;
 import android.os.Looper;
 import android.support.annotation.RequiresApi;
 import android.support.v4.app.NotificationCompat;
+import android.support.v4.content.LocalBroadcastManager;
 import android.widget.Toast;
 
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.messaging.FirebaseMessagingService;
 import com.google.firebase.messaging.RemoteMessage;
+import com.sccodesoft.dagorider.Common.Common;
 import com.sccodesoft.dagorider.Helper.NotificationHelper;
+import com.sccodesoft.dagorider.Model.Token;
 import com.sccodesoft.dagorider.R;
 import com.sccodesoft.dagorider.RateActivity;
+
+import java.util.Map;
 
 public class MyFirebaseMessaging extends FirebaseMessagingService {
 
     @Override
+    public void onNewToken(String s) {
+        super.onNewToken(s);
+        updateTokenToServer(s);
+    }
+
+    private void updateTokenToServer(String refreshedToken) {
+        FirebaseDatabase db = FirebaseDatabase.getInstance();
+        DatabaseReference tokens = db.getReference(Common.token_tbl);
+
+        Token token = new Token(refreshedToken);
+        if(FirebaseAuth.getInstance().getCurrentUser() != null)
+            tokens.child(FirebaseAuth.getInstance().getCurrentUser().getUid())
+                    .setValue(token);
+    }
+
+    @Override
     public void onMessageReceived(final RemoteMessage remoteMessage) {
-        if(remoteMessage.getNotification().getTitle().equals("Request Canceled!"))
-        {
-            Handler handler = new Handler(Looper.getMainLooper());
-            handler.post(new Runnable() {
-                @Override
-                public void run() {
-                    Toast.makeText(MyFirebaseMessaging.this, remoteMessage.getNotification().getBody(), Toast.LENGTH_SHORT).show();
-                }
-            });
-        }
-        else if(remoteMessage.getNotification().getTitle().equals("Driver Arrived!"))
-        {
-            if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
-                showArrivedNotificationAPI26(remoteMessage.getNotification().getBody());
-            else
-                showArrivedNotification(remoteMessage.getNotification().getBody());
-        }
-        else if(remoteMessage.getNotification().getTitle().equals("Drop Off"))
-        {
-            openRatingActivity(remoteMessage.getNotification().getBody());
+        if(remoteMessage.getData() != null) {
+            Map<String,String> data = remoteMessage.getData();
+            String title = data.get("title");
+            final String message = data.get("message");
+
+            if(title.equals("Request Canceled!")) {
+                Handler handler = new Handler(Looper.getMainLooper());
+                handler.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        Toast.makeText(MyFirebaseMessaging.this, message, Toast.LENGTH_SHORT).show();
+                    }
+                });
+
+                LocalBroadcastManager.getInstance(MyFirebaseMessaging.this)
+                        .sendBroadcast(new Intent(Common.CANCEL_BROADCAST_STRING));
+
+            } else if (title.equals("Driver Arrived!")) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
+                    showArrivedNotificationAPI26(message);
+                else
+                    showArrivedNotification(message);
+            } else if (title.equals("Drop Off")) {
+                openRatingActivity(message);
+            }
         }
     }
 
@@ -60,6 +89,10 @@ public class MyFirebaseMessaging extends FirebaseMessagingService {
     }
 
     private void openRatingActivity(String body) {
+
+        LocalBroadcastManager.getInstance(MyFirebaseMessaging.this)
+                .sendBroadcast(new Intent(Common.DROPOFF_BROADCAST_STRING));
+
         Intent intent = new Intent(this,RateActivity.class);
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         startActivity(intent);

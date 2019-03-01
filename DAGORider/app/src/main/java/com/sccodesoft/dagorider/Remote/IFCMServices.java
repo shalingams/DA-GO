@@ -1,7 +1,7 @@
 package com.sccodesoft.dagorider.Remote;
 
+import com.sccodesoft.dagorider.Model.DataMessage;
 import com.sccodesoft.dagorider.Model.FCMResponse;
-import com.sccodesoft.dagorider.Model.Sender;
 
 import retrofit2.Call;
 import retrofit2.http.Body;
@@ -15,5 +15,5 @@ public interface IFCMServices {
 
     })
     @POST("fcm/send")
-    Call<FCMResponse> sendMessage(@Body Sender body);
+    Call<FCMResponse> sendMessage(@Body DataMessage body);
 }

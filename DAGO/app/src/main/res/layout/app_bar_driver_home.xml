@@ -37,7 +37,8 @@
             android:weightSum="6"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:padding="8dp">
+            android:padding="8dp"
+            android:visibility="gone">
 
             <ImageView
                 android:src="@drawable/ic_pin_drop_black_24dp"
