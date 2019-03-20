@@ -10,6 +10,8 @@ import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.content.res.Resources;
 import android.graphics.BitmapFactory;
+import android.location.Address;
+import android.location.Geocoder;
 import android.location.Location;
 import android.net.Uri;
 import android.os.Build;
@@ -90,8 +92,11 @@ import com.squareup.picasso.Picasso;
 import com.theartofdev.edmodo.cropper.CropImage;
 import com.theartofdev.edmodo.cropper.CropImageView;
 
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 
@@ -158,7 +163,7 @@ public class Home extends AppCompatActivity
     private BroadcastReceiver mCancelBroadCast = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
-            btnPickupRequest.setText("PICK UP REQUEST");
+            btnPickupRequest.setText("SEARCH DRIVERS");
 
             Common.driverId = "";
             Common.isDriverFound=false;
@@ -336,9 +341,11 @@ public class Home extends AppCompatActivity
             }
         });
 
+
         setUpLocation();
 
         updateFirebaseToken();
+
     }
 
     private void updateFirebaseToken() {
@@ -449,9 +456,7 @@ public class Home extends AppCompatActivity
                 else
                 {
                     if(!Common.isDriverFound) {
-                        Toast.makeText(Home.this, "No any available driver near your location..", Toast.LENGTH_SHORT).show();
-
-                        btnPickupRequest.setText("PICK UP REQUEST");
+                        btnPickupRequest.setText("SEARCH DRIVERS");
 
                         Common.driverId = "";
 
@@ -463,6 +468,8 @@ public class Home extends AppCompatActivity
                         mUserMarker.hideInfoWindow();
 
                         geoQuery.removeAllListeners();
+
+                        Toast.makeText(Home.this, "No any available driver near your location..", Toast.LENGTH_SHORT).show();
                     }
                 }
             }
@@ -499,6 +506,7 @@ public class Home extends AppCompatActivity
         {
             @Override
             public void onLocationResult(LocationResult locationResult) {
+                Common.mLastLocation = locationResult.getLastLocation();
                 Common.mLastLocation = locationResult.getLocations().get(locationResult.getLocations().size()-1);
                 displayLocation();
             }
@@ -561,13 +569,32 @@ public class Home extends AppCompatActivity
 
     }
 
+
+    public void setLocationAddress(double lat, double lng) {
+        Geocoder geocoder = new Geocoder(Home.this, Locale.getDefault());
+        try {
+            List<Address> addresses = geocoder.getFromLocation(lat, lng, 1);
+            Address obj = addresses.get(0);
+            String add = obj.getAddressLine(0);
+
+            place_location.setText(add);
+
+        } catch (IOException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+            Toast.makeText(this, e.getMessage(), Toast.LENGTH_SHORT).show();
+        }
+    }
+
     private void loadAllAvailabaleDriver(final LatLng location) {
 
        mMap.clear();
         mUserMarker = mMap.addMarker(new MarkerOptions()
                 .icon(BitmapDescriptorFactory.fromResource(R.drawable.marker))
                 .position(location)
-                .title("You"));
+                .title("Pickup Here"));
+
+        setLocationAddress(location.latitude,location.longitude);
 
         mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(location,15.0f));
 
@@ -946,14 +973,23 @@ public class Home extends AppCompatActivity
             return;
         }
         fusedLocationProviderClient.requestLocationUpdates(mLocationRequest,locationCallback,Looper.myLooper());
+
     }
 
 
     @Override
     public void onInfoWindowClick(Marker marker) {
 
-        if(!marker.getTitle().equals("You"))
+        if(marker.getTitle().equals("Pickup Here"))
         {
+            Toast.makeText(this, "This Will Be Your Pick Up Location..", Toast.LENGTH_SHORT).show();
+        }
+        else if(marker.getTitle().equals("You"))
+        {
+            Toast.makeText(this, "Your Current Location..", Toast.LENGTH_SHORT).show();
+        }
+        else
+            {
             Intent intent = new Intent(Home.this,CallDriver.class);
             String driveridc =marker.getSnippet().substring(12);
             Log.i("DRRRRRR",driveridc);

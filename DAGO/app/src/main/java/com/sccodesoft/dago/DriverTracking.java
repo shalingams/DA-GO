@@ -351,13 +351,13 @@ GoogleApiClient.ConnectionCallbacks,
 
         riderMarker = mMap.addCircle(new CircleOptions()
                 .center(new LatLng(Double.parseDouble(riderLat),Double.parseDouble(riderLng)))
-                .radius(50)
+                .radius(100)
                 .strokeColor(Color.BLUE)
                 .fillColor(0x220000FF)
                 .strokeWidth(5.0f));
 
         //Geo Fencing with 50m radius
-        geoFire = new GeoFire(FirebaseDatabase.getInstance().getReference(Common.driver_tbl));
+        geoFire = new GeoFire(FirebaseDatabase.getInstance().getReference(Common.driver_tbl).child(Common.currentDriver.getCarType()));
         GeoQuery geoQuery = geoFire.queryAtLocation(new GeoLocation(Double.parseDouble(riderLat),Double.parseDouble(riderLng)),0.05);
 
         geoQuery.addGeoQueryEventListener(new GeoQueryEventListener() {

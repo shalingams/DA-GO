@@ -58,7 +58,6 @@
 
         </LinearLayout>
 
-
         <TextView
             android:layout_margin="16dp"
             android:id="@+id/txtStatus"

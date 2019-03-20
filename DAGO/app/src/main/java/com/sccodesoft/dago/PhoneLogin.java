@@ -226,7 +226,9 @@ public class PhoneLogin extends AppCompatActivity {
 
                             updateTokenToServer();
 
-                            startActivity(new Intent(PhoneLogin.this, DriverHome.class));
+                            Intent intent = new Intent(PhoneLogin.this, DriverHome.class);
+                            intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
+                            startActivity(intent);
                             finish();
                         }
                         else

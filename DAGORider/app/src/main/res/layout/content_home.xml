@@ -54,7 +54,7 @@
                 android:background="@drawable/btn_sign_in_background"
                 android:textColor="@android:color/white"
                 android:layout_margin="10dp"
-                android:text="PICK UP REQUEST"
+                android:text="SEARCH DRIVERS"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 />

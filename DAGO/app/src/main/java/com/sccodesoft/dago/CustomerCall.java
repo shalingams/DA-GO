@@ -45,6 +45,8 @@ public class CustomerCall extends AppCompatActivity {
     String lat;
     String lng;
 
+    int Accpet;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -52,6 +54,8 @@ public class CustomerCall extends AppCompatActivity {
 
         mService = Common.getGoogleAPI();
         mFCMService = Common.getFCMService();
+
+        Accpet = 0;
 
         //Init View
         txtAddress = (TextView)findViewById(R.id.txtAddress);
@@ -78,6 +82,7 @@ public class CustomerCall extends AppCompatActivity {
                 intent.putExtra("lng",lng);
                 intent.putExtra("customerId",customerId);
 
+                Accpet = 1;
                 startActivity(intent);
                 finish();
             }
@@ -108,10 +113,8 @@ public class CustomerCall extends AppCompatActivity {
 
             @Override
             public void onFinish() {
-                if(!TextUtils.isEmpty(customerId))
+                if(!TextUtils.isEmpty(customerId) && Accpet != 1)
                     cancelBooking(customerId);
-                else
-                    Toast.makeText(CustomerCall.this, "Customer ID Must be not Null", Toast.LENGTH_SHORT).show();
             }
         }.start();
     }
