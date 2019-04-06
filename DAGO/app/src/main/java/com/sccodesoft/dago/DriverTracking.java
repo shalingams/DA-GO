@@ -446,6 +446,7 @@ public class DriverTracking extends FragmentActivity implements
         content.put("distance",distance);
         content.put("total",String.valueOf(fee));
         Log.i("SHEEEEEd",String.valueOf(fee));
+        content.put("driverId",FirebaseAuth.getInstance().getCurrentUser().getUid());
         content.put("location_start",String.format("%f,%f",pickUpLocation.getLatitude(),pickUpLocation.getLongitude()));
         content.put("location_end",String.format("%f,%f",Common.mLastLocation.getLatitude(),Common.mLastLocation.getLongitude()));
 

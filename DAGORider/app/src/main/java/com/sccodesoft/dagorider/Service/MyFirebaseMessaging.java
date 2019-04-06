@@ -23,6 +23,7 @@ import com.google.firebase.messaging.FirebaseMessagingService;
 import com.google.firebase.messaging.RemoteMessage;
 import com.sccodesoft.dagorider.Common.Common;
 import com.sccodesoft.dagorider.Helper.NotificationHelper;
+import com.sccodesoft.dagorider.InTripActivity;
 import com.sccodesoft.dagorider.Model.Token;
 import com.sccodesoft.dagorider.R;
 import com.sccodesoft.dagorider.RateActivity;
@@ -67,12 +68,16 @@ public class MyFirebaseMessaging extends FirebaseMessagingService {
                         .sendBroadcast(new Intent(Common.CANCEL_BROADCAST_STRING));
 
             } else if (title.equals("Driver Arrived!")) {
+                Intent intent = new Intent(this, InTripActivity.class);
+                intent.putExtra("arrived",true);
+                startActivity(intent);
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
                     showArrivedNotificationAPI26(message);
                 else
                     showArrivedNotification(message);
             } else if (title.equals("Drop Off")) {
 
+                String driverid = data.get("driverId");
                 String start_address = data.get("start_address");
                 String end_address = data.get("end_address");
                 String time = data.get("time");
@@ -81,7 +86,11 @@ public class MyFirebaseMessaging extends FirebaseMessagingService {
                 Log.i("SHEEEEEd",total);
                 String location_start = data.get("location_start");
                 String location_end = data.get("location_end");
-                openRatingActivity(message,start_address,end_address,time,distance,total,location_start,location_end);
+                openRatingActivity(message,start_address,end_address,time,distance,total,location_start,location_end,driverid);
+            }
+            else if (title.equals("Request Accepted!")) {
+                Common.driverId = data.get("driverid");
+                startActivity(new Intent(this, InTripActivity.class));
             }
         }
     }
@@ -98,12 +107,13 @@ public class MyFirebaseMessaging extends FirebaseMessagingService {
         notificationHelper.getManager().notify(1,builder.build());
     }
 
-    private void openRatingActivity(String body,String start_address, String end_address, String time, String distance, String fee,String location_start,String location_end) {
+    private void openRatingActivity(String body,String start_address, String end_address, String time, String distance, String fee,String location_start,String location_end,String driverid) {
 
         LocalBroadcastManager.getInstance(MyFirebaseMessaging.this)
                 .sendBroadcast(new Intent(Common.DROPOFF_BROADCAST_STRING));
 
         Intent intent = new Intent(this,RateActivity.class);
+        intent.putExtra("driverId",driverid);
         intent.putExtra("start_address",start_address);
         intent.putExtra("end_address",end_address);
         intent.putExtra("time",time);
@@ -111,8 +121,6 @@ public class MyFirebaseMessaging extends FirebaseMessagingService {
         intent.putExtra("total",fee);
         intent.putExtra("location_start",location_start);
         intent.putExtra("location_end",location_end);
-
-        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         startActivity(intent);
     }
 

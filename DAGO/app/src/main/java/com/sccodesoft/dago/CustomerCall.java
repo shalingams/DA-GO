@@ -93,6 +93,9 @@ public class CustomerCall extends AppCompatActivity {
                 FirebaseDatabase.getInstance().getReference(Common.user_driver_tbl).
                         child(FirebaseAuth.getInstance().getCurrentUser().getUid()).child("reserved").setValue("1");
 
+                if(!TextUtils.isEmpty(customerId))
+                    acceptBooking(customerId);
+
                 startActivity(intent);
                 finish();
             }
@@ -114,6 +117,35 @@ public class CustomerCall extends AppCompatActivity {
         }
 
         startTimer();
+    }
+
+    private void acceptBooking(String customerId) {
+        Token token = new Token(customerId);
+
+       /* Notification notification = new Notification("Request Canceled!","Driver has cancelled your request!");
+        Sender sender = new Sender(token.getToken(),notification);*/
+
+        Map<String,String> content = new HashMap<>();
+        content.put("title","Request Accepted!");
+        content.put("driverid",FirebaseAuth.getInstance().getCurrentUser().getUid());
+        DataMessage dataMessage = new DataMessage(token.getToken(),content);
+
+        mFCMService.sendMessage(dataMessage)
+                .enqueue(new Callback<FCMResponse>() {
+                    @Override
+                    public void onResponse(Call<FCMResponse> call, Response<FCMResponse> response) {
+                        if(response.body().success==1)
+                        {
+                            Toast.makeText(CustomerCall.this, "Request Accepted.", Toast.LENGTH_SHORT).show();
+                            finish();
+                        }
+                    }
+
+                    @Override
+                    public void onFailure(Call<FCMResponse> call, Throwable t) {
+
+                    }
+                });
     }
 
     private void startTimer() {

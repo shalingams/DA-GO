@@ -450,6 +450,7 @@ public class Home extends AppCompatActivity
                 {
                     Common.isDriverFound=true;
                     Common.driverId=key;
+                    Log.i("RRRRRR",key);
                     btnPickupRequest.setText("CALL DRIVER");
                    // Toast.makeText(Home.this, key, Toast.LENGTH_SHORT).show();
                 }
@@ -711,8 +712,6 @@ public class Home extends AppCompatActivity
         DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
         if (drawer.isDrawerOpen(GravityCompat.START)) {
             drawer.closeDrawer(GravityCompat.START);
-        } else {
-            super.onBackPressed();
         }
     }
 

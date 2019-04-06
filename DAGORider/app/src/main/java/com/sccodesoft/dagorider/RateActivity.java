@@ -6,6 +6,7 @@ import android.content.Intent;
 import android.support.annotation.NonNull;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.Button;
@@ -76,6 +77,7 @@ public class RateActivity extends AppCompatActivity {
 
         if(getIntent() != null)
         {
+            Common.driverId = getIntent().getStringExtra("driverId");
             Calendar calendar = Calendar.getInstance();
             date = String.format("%s, %d/%d",convertToDayOfWeek(calendar.get(Calendar.DAY_OF_WEEK)),calendar.get(Calendar.DAY_OF_MONTH),calendar.get(Calendar.MONTH));
 
@@ -210,7 +212,7 @@ public class RateActivity extends AppCompatActivity {
                                         Map<String,Object> driverUpdateRate = new HashMap<>();
                                         driverUpdateRate.put("rates",valueUpdate);
 
-                                        driverInformationRef.child(Common.driverId)
+                                        driverInformationRef.child(driverId)
                                                 .updateChildren(driverUpdateRate)
                                                 .addOnCompleteListener(new OnCompleteListener<Void>() {
                                                     @Override
