@@ -15,11 +15,11 @@
       },
       "oauth_client": [
         {
-          "client_id": "399671189784-0finte1nph9ue47l8i007k88ctpk9bnc.apps.googleusercontent.com",
+          "client_id": "399671189784-flq2hmj9o5ues3tbnetrtgqpgpv7tvhq.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
             "package_name": "com.sccodesoft.dago",
-            "certificate_hash": "57330327c2c89ae523c70f210c34c6eef0f69e30"
+            "certificate_hash": "3651323eeb8ef9d52ba2d7bdf4e7fa13e570cd52"
           }
         },
         {
@@ -59,11 +59,11 @@
       },
       "oauth_client": [
         {
-          "client_id": "399671189784-olu0u4vphlaejobqfkvejahqift3srqd.apps.googleusercontent.com",
+          "client_id": "399671189784-rhlsu7d8bku8m0v52ic1o7nu8bgocs5o.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
             "package_name": "com.sccodesoft.dagorider",
-            "certificate_hash": "57330327c2c89ae523c70f210c34c6eef0f69e30"
+            "certificate_hash": "3651323eeb8ef9d52ba2d7bdf4e7fa13e570cd52"
           }
         },
         {

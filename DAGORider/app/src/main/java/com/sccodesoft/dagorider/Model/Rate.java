@@ -1,7 +1,7 @@
 package com.sccodesoft.dagorider.Model;
 
 public class Rate {
-    private String rates;
+    private String rates="0.0";
     private String comments;
     private String raterid;
 

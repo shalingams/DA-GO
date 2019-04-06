@@ -31,12 +31,16 @@ public class MyFirebaseMessaging extends FirebaseMessagingService {
             String customer = data.get("customer");
             String lat = data.get("lat");
             String lng = data.get("lng");
+            String destlat = data.get("destlat");
+            String destlng = data.get("destlng");
 
            // LatLng customer_location = new Gson().fromJson(message, LatLng.class);
 
             Intent intent = new Intent(getBaseContext(), CustomerCall.class);
             intent.putExtra("lat", lat);
             intent.putExtra("lng", lng);
+            intent.putExtra("destlat",destlat);
+            intent.putExtra("destlng",destlng);
             intent.putExtra("customer", customer);
 
             startActivity(intent);

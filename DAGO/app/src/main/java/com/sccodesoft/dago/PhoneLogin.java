@@ -220,16 +220,23 @@ public class PhoneLogin extends AppCompatActivity {
                     public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
                         if(dataSnapshot.exists()) {
                             Common.currentDriver = dataSnapshot.getValue(Driver.class);
-
                             if(waitingDialog.isShowing())
                                 waitingDialog.dismiss();
 
-                            updateTokenToServer();
+                            if(Common.currentDriver.getActivated()==1) {
+                                updateTokenToServer();
 
-                            Intent intent = new Intent(PhoneLogin.this, DriverHome.class);
-                            intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
-                            startActivity(intent);
-                            finish();
+                                Intent intent = new Intent(PhoneLogin.this, DriverHome.class);
+                                intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
+                                startActivity(intent);
+                                finish();
+                            }
+                            else
+                            {
+                                Toast.makeText(PhoneLogin.this, "Your Account is not Activated.. Please wait for Account Activation..", Toast.LENGTH_LONG).show();
+                                startActivity(new Intent(PhoneLogin.this,MainActivity.class));
+                                finish();
+                            }
                         }
                         else
                         {
@@ -281,6 +288,8 @@ public class PhoneLogin extends AppCompatActivity {
         View resigter_layout = inflater.inflate(R.layout.layout_register,null);
 
         final MaterialEditText edtName = resigter_layout.findViewById(R.id.edtName);
+        final MaterialEditText edtHomeTown = resigter_layout.findViewById(R.id.edtHomeTown);
+        final MaterialEditText edtIntroduceCode = resigter_layout.findViewById(R.id.edtIntroduceCode);
         final MaterialEditText edtPhone = resigter_layout.findViewById(R.id.edtPhone);
         image_upload = resigter_layout.findViewById(R.id.image_upload);
 
@@ -306,6 +315,12 @@ public class PhoneLogin extends AppCompatActivity {
                     showRegisterDialog();
                     return;
                 }
+                else if(TextUtils.isEmpty(edtHomeTown.getText().toString()))
+                {
+                    Toast.makeText(PhoneLogin.this, "Please Enter Your HomeTown..", Toast.LENGTH_SHORT).show();
+                    showRegisterDialog();
+                    return;
+                }
                 else if(avatarUrl==null)
                 {
                     Toast.makeText(PhoneLogin.this, "Please Select Profile Image..", Toast.LENGTH_SHORT).show();
@@ -318,19 +333,26 @@ public class PhoneLogin extends AppCompatActivity {
 
                                     Driver driver = new Driver();
                                     driver.setName(edtName.getText().toString());
+                                    driver.setHomeTown(edtHomeTown.getText().toString());
+                                    driver.setIntroduceCode(edtIntroduceCode.getText().toString());
+                                    driver.setMyCode(UUID.randomUUID().toString().substring(30).toUpperCase()+phoneNumber.getText().toString().substring(5));
                                     driver.setPhone("+94"+phoneNumber.getText().toString());
                                     driver.setAvatarUrl(avatarUrl);
                                     driver.setRates("0.0");
                                     driver.setCarType("DAGO X");
+                                    driver.setActivated(0);
+                                    driver.setReserved("0");
 
                                     users.child(mAuth.getCurrentUser().getUid())
                                             .setValue(driver)
                                             .addOnSuccessListener(new OnSuccessListener<Void>() {
                                                 @Override
                                                 public void onSuccess(Void aVoid) {
-                                                    Toast.makeText(PhoneLogin.this, "You have Registered Successfully..", Toast.LENGTH_SHORT).show();
+                                                    waitingDialog.dismiss();
+                                                    Toast.makeText(PhoneLogin.this, "You have Registered Successfully.. Please Wait For The Account Activation..", Toast.LENGTH_LONG).show();
+                                                    startActivity(new Intent(PhoneLogin.this,MainActivity.class));
+                                                    finish();
 
-                                                    loginUser();
                                                 }
                                             })
                                             .addOnFailureListener(new OnFailureListener() {

@@ -6,6 +6,7 @@ import android.support.annotation.NonNull;
 import android.util.Log;
 import android.widget.Toast;
 
+import com.google.android.gms.maps.model.LatLng;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
@@ -43,6 +44,7 @@ public class Common {
     public static final int PICK_IMAGE_REQUEST = 9999;
 
     public static Location mLastLocation;
+    public static LatLng mDestination;
 
     public static final String driver_tbl = "Drivers";
     public static final String user_driver_tbl = "DriversInformation";
@@ -57,7 +59,7 @@ public class Common {
     public static final String user_field = "rider_usr";
     public static final String pwd_field = "rider_pwd";
 
-    private static double base_fare = 50;
+    public static double base_fare = 50;
     private static double time_rate = 2;
     private static double distance_rate = 40;
 
@@ -76,7 +78,7 @@ public class Common {
         return GoogleMapAPI.getClient(googleAPIUrl).create(IGoogleAPI.class);
     }
 
-    public static void sendRequestToDriver(String driverId, final IFCMServices mService,final Context context,final Location currentLocation) {
+    public static void sendRequestToDriver(String driverId, final IFCMServices mService, final Context context, final Location currentLocation, final LatLng destination) {
         DatabaseReference tokens = FirebaseDatabase.getInstance().getReference(Common.token_tbl);
 
         tokens.orderByKey().equalTo(driverId)
@@ -97,6 +99,8 @@ public class Common {
                             content.put("customer",riderToken);
                             content.put("lat",String.valueOf(currentLocation.getLatitude()));
                             content.put("lng",String.valueOf(currentLocation.getLongitude()));
+                            content.put("destlat", String.valueOf(destination.latitude));
+                            content.put("destlng", String.valueOf(destination.longitude));
                             DataMessage dataMessage = new DataMessage(token.getToken(),content);
 
 

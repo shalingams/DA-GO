@@ -13,6 +13,7 @@ import android.os.Looper;
 import android.support.annotation.RequiresApi;
 import android.support.v4.app.NotificationCompat;
 import android.support.v4.content.LocalBroadcastManager;
+import android.util.Log;
 import android.widget.Toast;
 
 import com.google.firebase.auth.FirebaseAuth;
@@ -71,7 +72,16 @@ public class MyFirebaseMessaging extends FirebaseMessagingService {
                 else
                     showArrivedNotification(message);
             } else if (title.equals("Drop Off")) {
-                openRatingActivity(message);
+
+                String start_address = data.get("start_address");
+                String end_address = data.get("end_address");
+                String time = data.get("time");
+                String distance = data.get("distance");
+                String total = data.get("total");
+                Log.i("SHEEEEEd",total);
+                String location_start = data.get("location_start");
+                String location_end = data.get("location_end");
+                openRatingActivity(message,start_address,end_address,time,distance,total,location_start,location_end);
             }
         }
     }
@@ -88,12 +98,20 @@ public class MyFirebaseMessaging extends FirebaseMessagingService {
         notificationHelper.getManager().notify(1,builder.build());
     }
 
-    private void openRatingActivity(String body) {
+    private void openRatingActivity(String body,String start_address, String end_address, String time, String distance, String fee,String location_start,String location_end) {
 
         LocalBroadcastManager.getInstance(MyFirebaseMessaging.this)
                 .sendBroadcast(new Intent(Common.DROPOFF_BROADCAST_STRING));
 
         Intent intent = new Intent(this,RateActivity.class);
+        intent.putExtra("start_address",start_address);
+        intent.putExtra("end_address",end_address);
+        intent.putExtra("time",time);
+        intent.putExtra("distance",distance);
+        intent.putExtra("total",fee);
+        intent.putExtra("location_start",location_start);
+        intent.putExtra("location_end",location_end);
+
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         startActivity(intent);
     }

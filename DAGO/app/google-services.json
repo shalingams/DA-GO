@@ -15,11 +15,63 @@
       },
       "oauth_client": [
         {
-          "client_id": "399671189784-0finte1nph9ue47l8i007k88ctpk9bnc.apps.googleusercontent.com",
+          "client_id": "399671189784-flq2hmj9o5ues3tbnetrtgqpgpv7tvhq.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
             "package_name": "com.sccodesoft.dago",
+            "certificate_hash": "3651323eeb8ef9d52ba2d7bdf4e7fa13e570cd52"
+          }
+        },
+        {
+          "client_id": "399671189784-g7k96lqm7r9ilopcfrgomldf2ui8klfn.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCo9PySh-KJTojyRAYNv96g5Wi90yFyVPI"
+        }
+      ],
+      "services": {
+        "analytics_service": {
+          "status": 1
+        },
+        "appinvite_service": {
+          "status": 2,
+          "other_platform_oauth_client": [
+            {
+              "client_id": "399671189784-g7k96lqm7r9ilopcfrgomldf2ui8klfn.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        },
+        "ads_service": {
+          "status": 2
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:399671189784:android:e391b28a29825b64",
+        "android_client_info": {
+          "package_name": "com.sccodesoft.dagorider"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "399671189784-olu0u4vphlaejobqfkvejahqift3srqd.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.sccodesoft.dagorider",
             "certificate_hash": "57330327c2c89ae523c70f210c34c6eef0f69e30"
+          }
+        },
+        {
+          "client_id": "399671189784-5jl5jjrkh7inmbe71auu64m6bsnpvros.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.sccodesoft.dagorider",
+            "certificate_hash": "2705a7cd99afcc0ceb8eb597df1ec4fc7cc52f8b"
           }
         },
         {

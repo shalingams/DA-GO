@@ -32,8 +32,8 @@ import android.support.v7.widget.Toolbar;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.animation.LinearInterpolator;
+import android.widget.Button;
 import android.widget.RadioButton;
-import android.widget.RadioGroup;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -286,6 +286,9 @@ public class DriverHome extends AppCompatActivity
                     drivers = FirebaseDatabase.getInstance().getReference(Common.driver_tbl).child(Common.currentDriver.getCarType());
                     geoFire = new GeoFire(drivers);
                     displayLocation();
+
+                    FirebaseDatabase.getInstance().getReference(Common.user_driver_tbl).
+                            child(FirebaseAuth.getInstance().getCurrentUser().getUid()).child("reserved").setValue("0");
 
                     txtStatus.setText("YOU ARE ONLINE");
                     txtStatus.setBackground(getResources().getDrawable(R.drawable.btn_sign_in_background));
@@ -697,15 +700,57 @@ public class DriverHome extends AppCompatActivity
 
         if (id == R.id.nav_update_carType) {
             showDialogUpdateCarType();
-        }else if (id == R.id.nav_sign_out) {
+        }else if (id == R.id.nav_trip_history) {
+            startActivity(new Intent(DriverHome.this, HistoryActivity.class));
+        }
+        else if (id == R.id.nav_sign_out) {
             signOut();
-        } else if (id == R.id.nav_update_info) {
+        }
+        else if (id == R.id.nav_update_info) {
             showDialogUpdateInfo();
+        }else if (id == R.id.nav_myInvCode) {
+            showInviteCode();
         }
 
         DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
         drawer.closeDrawer(GravityCompat.START);
         return true;
+    }
+
+    private void showInviteCode() {
+        AlertDialog.Builder alertDialog = new AlertDialog.Builder(this);
+        alertDialog.setMessage("YOUR INVITE CODE");
+
+        LayoutInflater inflater = LayoutInflater.from(this);
+        View invCode = inflater.inflate(R.layout.layout_mycode,null);
+
+        TextView myCode = (TextView)invCode.findViewById(R.id.myInvCode);
+        Button shareCode = (Button)invCode.findViewById(R.id.btnShareCode);
+
+        shareCode.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent sharingIntent = new Intent(android.content.Intent.ACTION_SEND);
+                sharingIntent.setType("text/plain");
+                String shareBody = "Please use my invite code "+Common.currentDriver.getMyCode()+" to sign up for DAGO Driver App.";
+                sharingIntent.putExtra(android.content.Intent.EXTRA_SUBJECT, "DAGO Driver Invitation");
+                sharingIntent.putExtra(android.content.Intent.EXTRA_TEXT, shareBody);
+                startActivity(Intent.createChooser(sharingIntent, "Share via"));
+            }
+        });
+
+        myCode.setText(Common.currentDriver.getMyCode());
+
+        alertDialog.setView(invCode);
+
+        alertDialog.setPositiveButton("Done", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                dialog.dismiss();
+            }
+        });
+
+        alertDialog.show();
     }
 
     private void showDialogUpdateCarType() {

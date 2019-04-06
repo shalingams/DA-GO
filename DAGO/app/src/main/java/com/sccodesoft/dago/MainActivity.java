@@ -67,23 +67,36 @@ public class MainActivity extends AppCompatActivity {
                     public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
                         if(dataSnapshot.exists()) {
                             Common.currentDriver = dataSnapshot.getValue(Driver.class);
+                            if(waitingDialog.isShowing())
+                                waitingDialog.dismiss();
 
-                            updateTokenToServer();
+                            if(Common.currentDriver.getActivated()==1) {
+                                updateTokenToServer();
 
-                            waitingDialog.dismiss();
-                            startActivity(new Intent(MainActivity.this, DriverHome.class));
-                            finish();
+                                Intent intent = new Intent(MainActivity.this, DriverHome.class);
+                                intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
+                                startActivity(intent);
+                                finish();
+                            }
+                            else
+                            {
+                                if(waitingDialog.isShowing())
+                                    waitingDialog.dismiss();
+
+                                Toast.makeText(MainActivity.this, "Your Account is not Activated.. Please wait for Account Activation..", Toast.LENGTH_LONG).show();
+                            }
                         }
                         else
                         {
-                            waitingDialog.dismiss();
-                            Toast.makeText(MainActivity.this, "Click On Continue..", Toast.LENGTH_SHORT).show();                              
+                            if(waitingDialog.isShowing())
+                                waitingDialog.dismiss();
+
+                            Toast.makeText(MainActivity.this, "Click On Continue..", Toast.LENGTH_SHORT).show();
                         }
                     }
 
                     @Override
                     public void onCancelled(@NonNull DatabaseError databaseError) {
-                        waitingDialog.dismiss();
                         Toast.makeText(MainActivity.this, "Cancelled..", Toast.LENGTH_SHORT).show();
                     }
                 });

@@ -8,12 +8,15 @@ import android.content.res.Resources;
 import android.graphics.Color;
 import android.location.Location;
 import android.os.AsyncTask;
+import android.os.Looper;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
+import android.support.design.widget.NavigationView;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.FragmentActivity;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
 import android.widget.Toast;
@@ -25,8 +28,11 @@ import com.firebase.geofire.GeoQueryEventListener;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GooglePlayServicesUtil;
 import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.location.FusedLocationProviderClient;
+import com.google.android.gms.location.LocationCallback;
 import com.google.android.gms.location.LocationListener;
 import com.google.android.gms.location.LocationRequest;
+import com.google.android.gms.location.LocationResult;
 import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
@@ -41,6 +47,8 @@ import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.Polyline;
 import com.google.android.gms.maps.model.PolylineOptions;
+import com.google.android.gms.tasks.OnSuccessListener;
+import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.FirebaseDatabase;
 import com.sccodesoft.dago.Common.Common;
@@ -63,21 +71,25 @@ import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
 
-public class DriverTracking extends FragmentActivity implements OnMapReadyCallback,
-GoogleApiClient.OnConnectionFailedListener,
-GoogleApiClient.ConnectionCallbacks,
-        LocationListener {
+public class DriverTracking extends FragmentActivity implements
+        OnMapReadyCallback
+{
 
     private GoogleMap mMap;
 
     String riderLat;
     String riderLng;
+    String destLat;
+    String destLng;
     String customerId;
 
     private static final int PLAY_SERVICE_RES_REQUEST = 7001;
 
     private LocationRequest mLocationRequest;
     private GoogleApiClient mGoogleApiClient;
+
+    FusedLocationProviderClient fusedLocationProviderClient;
+    LocationCallback locationCallback;
 
     private static int UPDATE_INTERVAL = 5000;
     private static int FASTEST_INTERVAL = 3000;
@@ -106,29 +118,35 @@ GoogleApiClient.ConnectionCallbacks,
                 .findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
 
+        fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this);
+
         if(getIntent() != null)
         {
             riderLat = getIntent().getStringExtra("lat");
             riderLng = getIntent().getStringExtra("lng");
+            destLat = getIntent().getStringExtra("destlat");
+            destLng = getIntent().getStringExtra("destlng");
             customerId = getIntent().getStringExtra("customerId");
         }
 
         mService = Common.getGoogleAPI();
         mFCMServices = Common.getFCMService();
 
-        setUpLocation();
-
         btnStartTrip = (Button)findViewById(R.id.btnStartTrip);
+        setUpLocation(riderLat,riderLng);
         btnStartTrip.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 if(btnStartTrip.getText().equals("START TRIP"))
                 {
+                    setUpLocation(destLat,destLng);
                     pickUpLocation = Common.mLastLocation;
                     btnStartTrip.setText("DROP OFF HERE");
                 }
                 else if(btnStartTrip.getText().equals("DROP OFF HERE"))
                 {
+                    FirebaseDatabase.getInstance().getReference(Common.user_driver_tbl).
+                            child(FirebaseAuth.getInstance().getCurrentUser().getUid()).child("reserved").setValue("0");
                     calculateCashFee(pickUpLocation,Common.mLastLocation);
                 }
             }
@@ -172,7 +190,7 @@ GoogleApiClient.ConnectionCallbacks,
                                 String time_text = time.getString("text");
                                 Integer time_value = Integer.parseInt(time_text.replaceAll("\\D+",""));
 
-                                sendDropOffNotification(customerId);
+                                sendDropOffNotification(customerId,legsObject.getString("start_address"),legsObject.getString("end_address"),String.valueOf(time_value),String.valueOf(distance_value),Common.formulaPrice(distance_value,time_value));
 
                                 Intent intent = new Intent(DriverTracking.this,TripDetails.class);
                                 intent.putExtra("start_address",legsObject.getString("start_address"));
@@ -203,85 +221,57 @@ GoogleApiClient.ConnectionCallbacks,
         }
     }
 
-    private void setUpLocation()
+    private void setUpLocation(String lat,String lng)
     {
-
-            if(checkPlayServices())
-            {
-                buildGoogleApiClient();
-                createLocationRequest();
-                displayLocation();
-            }
+            buildLocationRequest();
+            buildLocationCallBack();
+            displayLocation(lat,lng);
 
     }
 
-    private void createLocationRequest()
-    {
-        mLocationRequest = new LocationRequest();
-        mLocationRequest.setInterval(UPDATE_INTERVAL);
-        mLocationRequest.setFastestInterval(FASTEST_INTERVAL);
-        mLocationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
-        mLocationRequest.setSmallestDisplacement(DISPLACEMENT);
-    }
 
-    private void buildGoogleApiClient()
-    {
-        mGoogleApiClient = new GoogleApiClient.Builder(this)
-                .addConnectionCallbacks(this)
-                .addOnConnectionFailedListener(this)
-                .addApi(LocationServices.API)
-                .build();
-        mGoogleApiClient.connect();
-    }
-
-    private boolean checkPlayServices()
-    {
-        int resultCode = GooglePlayServicesUtil.isGooglePlayServicesAvailable(this);
-        if(resultCode != ConnectionResult.SUCCESS)
-        {
-            if(GooglePlayServicesUtil.isUserRecoverableError(resultCode))
-                GooglePlayServicesUtil.getErrorDialog(resultCode,this,PLAY_SERVICE_RES_REQUEST).show();
-            else {
-                Toast.makeText(this, "This Device is not supported", Toast.LENGTH_SHORT).show();
-                finish();
-            }
-            return false;
-        }
-        return true;
-    }
-
-    private void displayLocation()
+    private void displayLocation(final String lat, final String lng)
     {
         if(ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED &&
                 ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED)
         {
             return;
         }
-        Common.mLastLocation = LocationServices.FusedLocationApi.getLastLocation(mGoogleApiClient);
-            if(Common.mLastLocation != null)
-            {
-                 final double latitude = Common.mLastLocation.getLatitude();
-                 final double longitude = Common.mLastLocation.getLongitude();
 
-                 if(driverMarker != null)
-                     driverMarker.remove();
-                 driverMarker = mMap.addMarker(new MarkerOptions().position(new LatLng(latitude,longitude))
-                        .title("You")
-                        .icon(BitmapDescriptorFactory.fromResource(R.drawable.marker)));
+        fusedLocationProviderClient.getLastLocation()
+                .addOnSuccessListener(new OnSuccessListener<Location>() {
+                    @Override
+                    public void onSuccess(Location location) {
+                        Common.mLastLocation = location;
 
-                 mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(new LatLng(latitude,longitude),17.0f));
+                        if(Common.mLastLocation != null)
+                        {
+                            final double latitude = Common.mLastLocation.getLatitude();
+                            final double longitude = Common.mLastLocation.getLongitude();
 
-                 if(direction != null)
-                     direction.remove(); // remove old directions
-                 getDirection();
-            }
-            else
-            {
-                Log.d("ERROR","Can't Get Your Location");
-            }
+                            if(driverMarker != null)
+                                driverMarker.remove();
+                            driverMarker = mMap.addMarker(new MarkerOptions().position(new LatLng(latitude,longitude))
+                                    .title("You")
+                                    .icon(BitmapDescriptorFactory.fromResource(R.drawable.marker)));
+
+                            mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(new LatLng(latitude,longitude),17.0f));
+
+                            if(direction != null)
+                                direction.remove(); // remove old directions
+                            getDirection(lat,lng);
+                        }
+                        else
+                        {
+                            Log.d("ERROR","Can't Get Your Location");
+                        }
+
+                    }
+                });
+
     }
 
-    private void getDirection() {
+    private void getDirection(String lat,String lng) {
         LatLng currentPosition = new LatLng(Common.mLastLocation.getLatitude(),Common.mLastLocation.getLongitude());
 
         String requestApi = null;
@@ -292,7 +282,7 @@ GoogleApiClient.ConnectionCallbacks,
                     "mode=driving&"+
                     "transit_routing_preference=less_driving&"+
                     "origin="+currentPosition.latitude+","+currentPosition.longitude+"&"+
-                    "destination="+riderLat+","+riderLng+"&"+
+                    "destination="+lat+","+lng+"&"+
                     "key="+getResources().getString(R.string.google_direction_api);
 
             Log.d("REQUEST_API",requestApi);
@@ -318,16 +308,6 @@ GoogleApiClient.ConnectionCallbacks,
         {
             e.printStackTrace();
         }
-    }
-
-    private void startLocationUpdates()
-    {
-        if(ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED &&
-                ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED)
-        {
-            return;
-        }
-        LocationServices.FusedLocationApi.requestLocationUpdates(mGoogleApiClient,mLocationRequest,this);
     }
 
 
@@ -388,6 +368,42 @@ GoogleApiClient.ConnectionCallbacks,
             }
         });
 
+
+        buildLocationCallBack();
+        buildLocationRequest();
+        fusedLocationProviderClient.requestLocationUpdates(mLocationRequest,locationCallback, Looper.myLooper());
+
+    }
+
+    private void buildLocationRequest() {
+
+        mLocationRequest = new LocationRequest();
+        mLocationRequest.setInterval(UPDATE_INTERVAL);
+        mLocationRequest.setFastestInterval(FASTEST_INTERVAL);
+        mLocationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
+        mLocationRequest.setSmallestDisplacement(DISPLACEMENT);
+
+    }
+
+    private void buildLocationCallBack() {
+
+        locationCallback =  new LocationCallback(){
+            @Override
+            public void onLocationResult(LocationResult locationResult) {
+                for(Location location:locationResult.getLocations())
+                {
+                    Common.mLastLocation = location;
+                }
+                if(btnStartTrip.getText().equals("DROP OFF HERE"))
+                {
+                    displayLocation(destLat,destLng);
+                }
+                else
+                {
+                    displayLocation(riderLat,riderLng);
+                }
+            }
+        };
     }
 
     private void sendArrivedNotification(String customerId) {
@@ -416,7 +432,7 @@ GoogleApiClient.ConnectionCallbacks,
         });
     }
 
-    private void sendDropOffNotification(String customerId) {
+    private void sendDropOffNotification(String customerId, String start_address, String end_address, String time, String distance, double fee) {
         Token token = new Token(customerId);
       /*  Notification notification = new Notification("Drop Off",customerId);
         Sender sender = new Sender(token.getToken(),notification);*/
@@ -424,6 +440,15 @@ GoogleApiClient.ConnectionCallbacks,
         Map<String,String> content = new HashMap<>();
         content.put("title","Drop Off");
         content.put("message",customerId);
+        content.put("start_address",start_address);
+        content.put("end_address",end_address);
+        content.put("time",time);
+        content.put("distance",distance);
+        content.put("total",String.valueOf(fee));
+        Log.i("SHEEEEEd",String.valueOf(fee));
+        content.put("location_start",String.format("%f,%f",pickUpLocation.getLatitude(),pickUpLocation.getLongitude()));
+        content.put("location_end",String.format("%f,%f",Common.mLastLocation.getLatitude(),Common.mLastLocation.getLongitude()));
+
         DataMessage dataMessage = new DataMessage(token.getToken(),content);
 
         mFCMServices.sendMessage(dataMessage).enqueue(new Callback<FCMResponse>() {
@@ -442,27 +467,8 @@ GoogleApiClient.ConnectionCallbacks,
         });
     }
 
-    @Override
-    public void onConnected(@Nullable Bundle bundle) {
-        displayLocation();
-        startLocationUpdates();
-    }
 
-    @Override
-    public void onConnectionSuspended(int i) {
-        mGoogleApiClient.connect();
-    }
 
-    @Override
-    public void onConnectionFailed(@NonNull ConnectionResult connectionResult) {
-
-    }
-
-    @Override
-    public void onLocationChanged(Location location) {
-        Common.mLastLocation = location;
-        displayLocation();
-    }
 
     private class ParserTask extends AsyncTask<String,Integer,List<List<HashMap<String,String>>>>
     {

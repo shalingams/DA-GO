@@ -12,6 +12,8 @@ import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.database.FirebaseDatabase;
 import com.sccodesoft.dago.Common.Common;
 import com.sccodesoft.dago.Model.DataMessage;
 import com.sccodesoft.dago.Model.FCMResponse;
@@ -44,6 +46,8 @@ public class CustomerCall extends AppCompatActivity {
 
     String lat;
     String lng;
+
+    String destlng,destlat;
 
     int Accpet;
 
@@ -80,9 +84,15 @@ public class CustomerCall extends AppCompatActivity {
                 Intent intent = new Intent(CustomerCall.this,DriverTracking.class);
                 intent.putExtra("lat",lat);
                 intent.putExtra("lng",lng);
+                intent.putExtra("destlat",destlat);
+                intent.putExtra("destlng",destlng);
                 intent.putExtra("customerId",customerId);
 
                 Accpet = 1;
+
+                FirebaseDatabase.getInstance().getReference(Common.user_driver_tbl).
+                        child(FirebaseAuth.getInstance().getCurrentUser().getUid()).child("reserved").setValue("1");
+
                 startActivity(intent);
                 finish();
             }
@@ -96,6 +106,8 @@ public class CustomerCall extends AppCompatActivity {
         {
             lat = getIntent().getStringExtra("lat");
             lng = getIntent().getStringExtra("lng");
+            destlat = getIntent().getStringExtra("destlat");
+            destlng = getIntent().getStringExtra("destlng");
             customerId = getIntent().getStringExtra("customer");
 
             getDirection(lat,lng);

@@ -13,6 +13,7 @@ import android.graphics.BitmapFactory;
 import android.location.Address;
 import android.location.Geocoder;
 import android.location.Location;
+import android.location.LocationManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -170,9 +171,6 @@ public class Home extends AppCompatActivity
 
             btnPickupRequest.setEnabled(true);
 
-            if(mapRipple.isAnimationRunning())
-                mapRipple.stopRippleMapAnimation();
-
             mUserMarker.hideInfoWindow();
         }
     };
@@ -274,15 +272,29 @@ public class Home extends AppCompatActivity
 
 
         btnPickupRequest = (Button)findViewById(R.id.btnPickupRequest);
+
+        if(getIntent().getStringExtra("rated")=="rated")
+        {
+            btnPickupRequest.setText("SEARCH DRIVERS");
+
+            Common.driverId = "";
+            Common.isDriverFound=false;
+
+            btnPickupRequest.setEnabled(true);
+        }
+
         btnPickupRequest.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 if(!Common.isDriverFound) {
                     requestPickupHere(FirebaseAuth.getInstance().getCurrentUser().getUid());
                 }
-                else {
+                else if(Common.mDestination!=null) {
                     btnPickupRequest.setEnabled(false);
-                    Common.sendRequestToDriver(Common.driverId, mService, Home.this, Common.mLastLocation);
+                    Common.sendRequestToDriver(Common.driverId, mService, Home.this, Common.mLastLocation, Common.mDestination);
+                }else
+                {
+                        Toast.makeText(Home.this, "Please Select Destination..", Toast.LENGTH_SHORT).show();
                 }
             }
         });
@@ -302,7 +314,13 @@ public class Home extends AppCompatActivity
             @Override
             public void onPlaceSelected(@NonNull Place place) {
 
-                mPlaceLocation = place.getName().toString()+", "+place.getAddress().toString();
+                mPlaceLocation = place.getName()+", "+place.getAddress();
+
+                Location temp = new Location(LocationManager.GPS_PROVIDER);
+                temp.setLatitude(place.getLatLng().latitude);
+                temp.setLongitude(place.getLatLng().longitude);
+
+                Common.mLastLocation = temp;
 
                 mMap.clear();
 
@@ -324,6 +342,8 @@ public class Home extends AppCompatActivity
             public void onPlaceSelected(@NonNull Place place) {
                 mPlaceDestination = place.getName().toString()+", "+place.getAddress().toString();
 
+                Common.mDestination = place.getLatLng();
+
                 mUserMarker = mMap.addMarker(new MarkerOptions()
                                     .position(place.getLatLng())
                                     .icon(BitmapDescriptorFactory.fromResource(R.drawable.destination_marker))
@@ -331,7 +351,7 @@ public class Home extends AppCompatActivity
                 mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(place.getLatLng(),15.0f));
 
                 //Show bottom info
-                BottomSheetDialogFragment mBottomSheet = BottomSheetRiderFragment.newInstance(mPlaceLocation,mPlaceDestination,false);
+                BottomSheetDialogFragment mBottomSheet = BottomSheetRiderFragment.newInstance(String.format("%f,%f",Common.mLastLocation.getLatitude(),Common.mLastLocation.getLongitude()),mPlaceDestination,false);
                 mBottomSheet.show(getSupportFragmentManager(),mBottomSheet.getTag());
             }
 
@@ -594,6 +614,7 @@ public class Home extends AppCompatActivity
                 .position(location)
                 .title("Pickup Here"));
 
+
         setLocationAddress(location.latitude,location.longitude);
 
         mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(location,15.0f));
@@ -619,33 +640,31 @@ public class Home extends AppCompatActivity
                         .addListenerForSingleValueEvent(new ValueEventListener() {
                             @Override
                             public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
-                                //Rider and User has same properties so using rider model
+                                //Rider and Driver has same properties so using rider model
                                 Rider rider = dataSnapshot.getValue(Rider.class);
 
-                                if(isDagoX)
-                                {
-                                    if(rider.getCarType().equals("DAGO X"))
-                                    {
-                                        //On Map
-                                        mMap.addMarker(new MarkerOptions()
-                                                .position(new LatLng(location.latitude,location.longitude))
-                                                .flat(true)
-                                                .title(rider.getName())
-                                                .snippet("Driver ID : "+dataSnapshot.getKey())
-                                                .icon(BitmapDescriptorFactory.fromResource(R.drawable.car)));
-                                    }
-                                }
-                                else
-                                {
-                                    if(rider.getCarType().equals("DAGO Black"))
-                                    {
-                                        //On Map
-                                        mMap.addMarker(new MarkerOptions()
-                                                .position(new LatLng(location.latitude,location.longitude))
-                                                .flat(true)
-                                                .title(rider.getName())
-                                                .snippet("Driver ID : "+dataSnapshot.getKey())
-                                                .icon(BitmapDescriptorFactory.fromResource(R.drawable.car)));
+                                if(!rider.getReserved().equals("1")) {
+
+                                    if (isDagoX) {
+                                        if (rider.getCarType().equals("DAGO X")) {
+                                            //On Map
+                                            mMap.addMarker(new MarkerOptions()
+                                                    .position(new LatLng(location.latitude, location.longitude))
+                                                    .flat(true)
+                                                    .title(rider.getName())
+                                                    .snippet("Driver ID : " + dataSnapshot.getKey())
+                                                    .icon(BitmapDescriptorFactory.fromResource(R.drawable.car)));
+                                        }
+                                    } else {
+                                        if (rider.getCarType().equals("DAGO Black")) {
+                                            //On Map
+                                            mMap.addMarker(new MarkerOptions()
+                                                    .position(new LatLng(location.latitude, location.longitude))
+                                                    .flat(true)
+                                                    .title(rider.getName())
+                                                    .snippet("Driver ID : " + dataSnapshot.getKey())
+                                                    .icon(BitmapDescriptorFactory.fromResource(R.drawable.car)));
+                                        }
                                     }
                                 }
 
@@ -727,7 +746,11 @@ public class Home extends AppCompatActivity
 
         if (id == R.id.nav_sign_out) {
             signOut();
-        } else if (id == R.id.nav_update_info) {
+        }
+        else if (id == R.id.nav_trip_history) {
+            startActivity(new Intent(Home.this,HistoryActivity.class));
+        }
+        else if (id == R.id.nav_update_info) {
             showDialogUpdateInfo();
         }
 
@@ -957,6 +980,7 @@ public class Home extends AppCompatActivity
                                             .icon(BitmapDescriptorFactory.fromResource(R.drawable.destination_marker))
                                             .position(latLng)
                                             .title("Destination"));
+                Common.mDestination=markerDestination.getPosition();
                 mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng,15.0f));
 
                 BottomSheetDialogFragment mBottomSheet = BottomSheetRiderFragment.newInstance(String.format("%f,%f",Common.mLastLocation.getLatitude(),Common.mLastLocation.getLongitude())
@@ -992,8 +1016,6 @@ public class Home extends AppCompatActivity
             {
             Intent intent = new Intent(Home.this,CallDriver.class);
             String driveridc =marker.getSnippet().substring(12);
-            Log.i("DRRRRRR",driveridc);
-            Log.i("DRRRRRo",marker.getSnippet());
             intent.putExtra("driverId",driveridc);
             intent.putExtra("lat",Common.mLastLocation.getLatitude());
             intent.putExtra("lng",Common.mLastLocation.getLongitude());

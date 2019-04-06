@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<android.support.v7.widget.CardView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    app:cardElevation="10dp">
+
+    <LinearLayout
+        android:orientation="vertical"
+        android:layout_margin="10dp"
+        android:gravity="center"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
+        <TextView
+            android:text="Get Discounts If Your Contacts Sign Up using Your Invite Code: "
+            android:textColor="@color/colorPrimary"
+            android:textColorHint="@color/colorPrimary"
+            android:textSize="20sp"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textAlignment="center"
+            app:met_singleLineEllipsis="true"
+            app:met_baseColor="@color/colorPrimary"
+            app:met_floatingLabel="highlight"
+            app:met_primaryColor="@color/colorPrimary"/>
+
+        <TextView
+            android:id="@+id/myInvCode"
+            android:layout_margin="20dp"
+            android:text="code here"
+            android:textColor="@android:color/white"
+            android:padding="5dp"
+            android:background="@drawable/btn_oflline_background"
+            android:textSize="25sp"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textAlignment="center"
+            app:met_singleLineEllipsis="true"/>
+
+        <Button
+            android:id="@+id/btnShareCode"
+            android:background="@drawable/btn_sign_in_background"
+            android:textColor="@android:color/white"
+            android:drawableLeft="@drawable/ic_share_black_24dp"
+            android:text="  Share Code"
+            android:padding="10dp"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content" />
+
+
+    </LinearLayout>
+
+
+</android.support.v7.widget.CardView>

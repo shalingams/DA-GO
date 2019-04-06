@@ -65,7 +65,7 @@ public class CallDriver extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 if (driverId != null && !driverId.isEmpty())
-                    Common.sendRequestToDriver(driverId, mService, getBaseContext(), mLastLocation);
+                    Common.sendRequestToDriver(driverId, mService, getBaseContext(), mLastLocation,Common.mDestination);
             }
         });
 

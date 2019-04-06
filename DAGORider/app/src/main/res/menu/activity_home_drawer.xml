@@ -8,6 +8,12 @@
             android:id="@+id/nav_update_info"
             android:icon="@drawable/ic_account_box_black_24dp"
             android:title="Update Information" />
+
+        <item
+            android:id="@+id/nav_trip_history"
+            android:icon="@drawable/ic_history_black_24dp"
+            android:title="Trip History" />
+
         <item
             android:id="@+id/nav_sign_out"
             android:icon="@drawable/ic_exit_to_app_black_24dp"
