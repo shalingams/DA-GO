@@ -7,6 +7,7 @@ import android.util.Log;
 import android.widget.Toast;
 
 import com.google.android.gms.maps.model.LatLng;
+import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
@@ -52,6 +53,7 @@ public class Common {
     public static final String pickup_request_tbl = "PickupRequest";
     public static final String token_tbl = "Tokens";
     public static final String rate_detail_tbl = "RateDetails";
+    public static final String ongoing_tbl = "OnGoingTrip";
 
     public static final String fcmURL = "https://fcm.googleapis.com";
     public static final String googleAPIUrl = "https://maps.googleapis.com";
@@ -59,13 +61,20 @@ public class Common {
     public static final String user_field = "rider_usr";
     public static final String pwd_field = "rider_pwd";
 
-    public static double base_fare = 50;
-    private static double time_rate = 2;
-    private static double distance_rate = 40;
+    public static double base_farex = 50;
+    public static double time_ratex = 2;
+    public static double distance_ratex = 40;
 
-    public static double getPrice(double km,int min)
+    public static double base_fareb = 140;
+    public static double time_rateb = 4;
+    public static double distance_rateb = 42;
+
+    public static double getPrice(double km,int min,boolean isDAGOX)
     {
-        return(base_fare+(time_rate*min)+(distance_rate*km));
+        if(isDAGOX)
+            return(base_farex+(time_ratex*min)+(distance_ratex*(km-1)));
+        else
+            return(base_fareb+(time_rateb*min)+(distance_rateb*(km-2)));
     }
 
     public static IFCMServices getFCMService()
@@ -97,6 +106,7 @@ public class Common {
 
                             Map<String,String> content = new HashMap<>();
                             content.put("customer",riderToken);
+                            content.put("customerid", FirebaseAuth.getInstance().getCurrentUser().getUid());
                             content.put("lat",String.valueOf(currentLocation.getLatitude()));
                             content.put("lng",String.valueOf(currentLocation.getLongitude()));
                             content.put("destlat", String.valueOf(destination.latitude));

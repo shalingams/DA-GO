@@ -11,6 +11,7 @@ import android.view.ViewGroup;
 import android.widget.TextView;
 
 import com.sccodesoft.dagorider.Common.Common;
+import com.sccodesoft.dagorider.Model.Rider;
 import com.sccodesoft.dagorider.Remote.IGoogleAPI;
 
 import org.json.JSONArray;
@@ -24,19 +25,20 @@ import retrofit2.Response;
 public class BottomSheetRiderFragment extends BottomSheetDialogFragment {
     String mLocation,mDestination;
 
-    boolean isTapOnMap;
+    boolean isTapOnMap,isDagoX;
 
     IGoogleAPI mService;
 
     TextView txtCalculate,txtLocation,txtDestination;
 
-    public static BottomSheetDialogFragment newInstance(String location,String destination,boolean isTapOnMap)
+    public static BottomSheetDialogFragment newInstance(String location,String destination,boolean isTapOnMap,boolean isDagoX)
     {
         BottomSheetDialogFragment fragment = new BottomSheetRiderFragment();
         Bundle args = new Bundle();
         args.putString("location",location);
         args.putString("destination",destination);
         args.putBoolean("isTapOnMap",isTapOnMap);
+        args.putBoolean("isDagoX",isDagoX);
         fragment.setArguments(args);
         return fragment;
     }
@@ -47,6 +49,7 @@ public class BottomSheetRiderFragment extends BottomSheetDialogFragment {
         mLocation = getArguments().getString("location");
         mDestination = getArguments().getString("destination");
         isTapOnMap = getArguments().getBoolean("isTapOnMap");
+        isDagoX = getArguments().getBoolean("isDagoX");
     }
 
     @Nullable
@@ -107,7 +110,7 @@ public class BottomSheetRiderFragment extends BottomSheetDialogFragment {
                         Integer time_value = Integer.parseInt(time_text.replaceAll("\\D+",""));
 
                         String final_calculate = String.format("%s + %s = Rs.%.2f",distance_text,time_text,
-                                                     Common.getPrice(distance_value,time_value));
+                                                     Common.getPrice(distance_value,time_value,isDagoX));
 
                         txtCalculate.setText(final_calculate);
 

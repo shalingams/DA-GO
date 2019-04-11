@@ -69,7 +69,9 @@ public class MyFirebaseMessaging extends FirebaseMessagingService {
 
             } else if (title.equals("Driver Arrived!")) {
                 Intent intent = new Intent(this, InTripActivity.class);
+               // intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
                 intent.putExtra("arrived",true);
+                intent.putExtra("driverId",data.get("driverID"));
                 startActivity(intent);
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
                     showArrivedNotificationAPI26(message);
@@ -83,14 +85,16 @@ public class MyFirebaseMessaging extends FirebaseMessagingService {
                 String time = data.get("time");
                 String distance = data.get("distance");
                 String total = data.get("total");
-                Log.i("SHEEEEEd",total);
                 String location_start = data.get("location_start");
                 String location_end = data.get("location_end");
-                openRatingActivity(message,start_address,end_address,time,distance,total,location_start,location_end,driverid);
+                String cartype = data.get("cartype");
+                openRatingActivity(message,start_address,end_address,time,distance,total,location_start,location_end,cartype,driverid);
             }
             else if (title.equals("Request Accepted!")) {
                 Common.driverId = data.get("driverid");
-                startActivity(new Intent(this, InTripActivity.class));
+                Intent intent = new Intent(this, InTripActivity.class);
+               // intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                startActivity(intent);
             }
         }
     }
@@ -107,7 +111,7 @@ public class MyFirebaseMessaging extends FirebaseMessagingService {
         notificationHelper.getManager().notify(1,builder.build());
     }
 
-    private void openRatingActivity(String body,String start_address, String end_address, String time, String distance, String fee,String location_start,String location_end,String driverid) {
+    private void openRatingActivity(String body,String start_address, String end_address, String time, String distance, String fee,String location_start,String location_end,String cartype,String driverid) {
 
         LocalBroadcastManager.getInstance(MyFirebaseMessaging.this)
                 .sendBroadcast(new Intent(Common.DROPOFF_BROADCAST_STRING));
@@ -121,6 +125,7 @@ public class MyFirebaseMessaging extends FirebaseMessagingService {
         intent.putExtra("total",fee);
         intent.putExtra("location_start",location_start);
         intent.putExtra("location_end",location_end);
+        intent.putExtra("cartype",cartype);
         startActivity(intent);
     }
 

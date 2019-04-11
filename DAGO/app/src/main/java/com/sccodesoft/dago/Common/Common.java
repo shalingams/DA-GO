@@ -15,6 +15,11 @@ public class Common
     public static final String user_rider_tbl = "RidersInformation";
     public static final String pickup_request_tbl = "PickupRequest";
     public static final String token_tbl = "Tokens";
+    public static final String ongoing_tbl = "OnGoingTrip";
+
+    public static double distancefare;
+    public static double waitingtime;
+    public static double totfare;
 
     public static final int PICK_IMAGE_REQUEST = 9999;
 
@@ -28,13 +33,18 @@ public class Common
     public static final String user_field = "usr";
     public static final String pwd_field = "pwd";
 
-    public static double base_fare = 50;
-    private static double time_rate = 2;
-    private static double distance_rate = 40;
+    public static double base_farex = 50;
+    public static double time_ratex = 2;
+    public static double distance_ratex = 40;
+
+    public static double base_fareb = 140;
+    public static double time_rateb = 4;
+    public static double distance_rateb = 42;
 
     public static double formulaPrice(double km,int min)
     {
-        return(base_fare+(time_rate*min)+(distance_rate*km));
+       // return(base_fare+(time_rate*min)+(distance_rate*km));
+        return 0;
     }
 
     public static IGoogleApi getGoogleAPI()

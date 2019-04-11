@@ -42,7 +42,7 @@ public class CustomerCall extends AppCompatActivity {
     IGoogleApi mService;
     IFCMServices mFCMService;
 
-    String customerId;
+    String customerId,cusID;
 
     String lat;
     String lng;
@@ -86,7 +86,8 @@ public class CustomerCall extends AppCompatActivity {
                 intent.putExtra("lng",lng);
                 intent.putExtra("destlat",destlat);
                 intent.putExtra("destlng",destlng);
-                intent.putExtra("customerId",customerId);
+                intent.putExtra("customerToken",customerId);
+                intent.putExtra("cusID",cusID);
 
                 Accpet = 1;
 
@@ -112,6 +113,7 @@ public class CustomerCall extends AppCompatActivity {
             destlat = getIntent().getStringExtra("destlat");
             destlng = getIntent().getStringExtra("destlng");
             customerId = getIntent().getStringExtra("customer");
+            cusID = getIntent().getStringExtra("cusid");
 
             getDirection(lat,lng);
         }

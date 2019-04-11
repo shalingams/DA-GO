@@ -211,6 +211,28 @@ public class Home extends AppCompatActivity
         carDagoX = (ImageView)findViewById(R.id.select_dagoX);
         carDagoBlack = (ImageView)findViewById(R.id.select_dagoBlack);
 
+        FirebaseDatabase.getInstance().getReference(Common.ongoing_tbl)
+                .addListenerForSingleValueEvent(new ValueEventListener() {
+                    @Override
+                    public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
+                        for(DataSnapshot postSnapShot : dataSnapshot.getChildren())
+                        {
+                            if(postSnapShot.child("Rider").getValue().toString().equals(FirebaseAuth.getInstance().getCurrentUser().getUid()))
+                            {
+                                Intent intent = new Intent(Home.this,InTripActivity.class);
+                                intent.putExtra("arrived",true);
+                                intent.putExtra("driverId",postSnapShot.getKey());
+                                startActivity(intent);
+                            }
+                        }
+                    }
+
+                    @Override
+                    public void onCancelled(@NonNull DatabaseError databaseError) {
+
+                    }
+                });
+
         carDagoX.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -351,7 +373,7 @@ public class Home extends AppCompatActivity
                 mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(place.getLatLng(),15.0f));
 
                 //Show bottom info
-                BottomSheetDialogFragment mBottomSheet = BottomSheetRiderFragment.newInstance(String.format("%f,%f",Common.mLastLocation.getLatitude(),Common.mLastLocation.getLongitude()),mPlaceDestination,false);
+                BottomSheetDialogFragment mBottomSheet = BottomSheetRiderFragment.newInstance(String.format("%f,%f",Common.mLastLocation.getLatitude(),Common.mLastLocation.getLongitude()),mPlaceDestination,false,isDagoX);
                 mBottomSheet.show(getSupportFragmentManager(),mBottomSheet.getTag());
             }
 
@@ -983,7 +1005,7 @@ public class Home extends AppCompatActivity
                 mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng,15.0f));
 
                 BottomSheetDialogFragment mBottomSheet = BottomSheetRiderFragment.newInstance(String.format("%f,%f",Common.mLastLocation.getLatitude(),Common.mLastLocation.getLongitude())
-                                                            ,String.format("%f,%f",latLng.latitude,latLng.longitude),true);
+                                                            ,String.format("%f,%f",latLng.latitude,latLng.longitude),true,isDagoX);
                 mBottomSheet.show(getSupportFragmentManager(),mBottomSheet.getTag());
             }
         });

@@ -1,6 +1,7 @@
 package com.sccodesoft.dago;
 
 import android.Manifest;
+import android.annotation.SuppressLint;
 import android.app.ProgressDialog;
 import android.content.Intent;
 import android.content.pm.PackageManager;
@@ -8,29 +9,26 @@ import android.content.res.Resources;
 import android.graphics.Color;
 import android.location.Location;
 import android.os.AsyncTask;
+import android.os.Handler;
 import android.os.Looper;
+import android.os.SystemClock;
 import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
-import android.support.design.widget.NavigationView;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.FragmentActivity;
 import android.os.Bundle;
 import android.util.Log;
-import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.firebase.geofire.GeoFire;
 import com.firebase.geofire.GeoLocation;
 import com.firebase.geofire.GeoQuery;
 import com.firebase.geofire.GeoQueryEventListener;
-import com.google.android.gms.common.ConnectionResult;
-import com.google.android.gms.common.GooglePlayServicesUtil;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationCallback;
-import com.google.android.gms.location.LocationListener;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationResult;
 import com.google.android.gms.location.LocationServices;
@@ -47,10 +45,13 @@ import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.Polyline;
 import com.google.android.gms.maps.model.PolylineOptions;
+import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.ValueEventListener;
 import com.sccodesoft.dago.Common.Common;
 import com.sccodesoft.dago.Helper.DirectionJSONParser;
 import com.sccodesoft.dago.Model.DataMessage;
@@ -81,7 +82,7 @@ public class DriverTracking extends FragmentActivity implements
     String riderLng;
     String destLat;
     String destLng;
-    String customerId;
+    String customerToken,cusID;
 
     private static final int PLAY_SERVICE_RES_REQUEST = 7001;
 
@@ -105,9 +106,17 @@ public class DriverTracking extends FragmentActivity implements
 
     GeoFire geoFire;
 
-    Button btnStartTrip;
+    Button btnStartTrip,btnWaiting;
 
     Location pickUpLocation;
+
+    TextView txtCurrFare;
+
+    long MillisecondTime, StartTime, TimeBuff, UpdateTime = 0L ;
+
+    Handler handler;
+
+    int Seconds, Minutes, MilliSeconds ;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -118,6 +127,45 @@ public class DriverTracking extends FragmentActivity implements
                 .findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
 
+        txtCurrFare = (TextView)findViewById(R.id.txtCurrFare);
+        
+        FirebaseDatabase.getInstance().getReference(Common.ongoing_tbl).child(FirebaseAuth.getInstance().getCurrentUser().getUid()).addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
+               if(!dataSnapshot.exists())
+               {
+                   Common.distancefare = 0;
+                   Common.waitingtime = 0;
+                   Common.totfare = 0;
+                   HashMap<String,String> map = new HashMap<>();
+                   map.put("Rider", cusID);
+                   map.put("distancefare",String.valueOf(Common.distancefare));
+                   map.put("waitingfare",String.valueOf(Common.waitingtime));
+                   map.put("total",String.valueOf(Common.totfare));
+                   FirebaseDatabase.getInstance().getReference(Common.ongoing_tbl).child(FirebaseAuth.getInstance().getCurrentUser().getUid())
+                           .setValue(map)
+                           .addOnFailureListener(new OnFailureListener() {
+                               @Override
+                               public void onFailure(@NonNull Exception e) {
+                                   Toast.makeText(DriverTracking.this, "Failed "+e.getMessage(), Toast.LENGTH_SHORT).show();
+                               }
+                           });
+               }
+               else
+               {
+                   Common.distancefare = Double.valueOf(dataSnapshot.child("distancefare").getValue().toString());
+                   Common.waitingtime = Double.valueOf(dataSnapshot.child("waitingfare").getValue().toString());
+                   Common.totfare = Double.valueOf(dataSnapshot.child("total").getValue().toString());
+                   Toast.makeText(DriverTracking.this, "Previous Trip Loaded..", Toast.LENGTH_SHORT).show();
+               }
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError databaseError) {
+
+            }
+        });
+
         fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this);
 
         if(getIntent() != null)
@@ -126,13 +174,42 @@ public class DriverTracking extends FragmentActivity implements
             riderLng = getIntent().getStringExtra("lng");
             destLat = getIntent().getStringExtra("destlat");
             destLng = getIntent().getStringExtra("destlng");
-            customerId = getIntent().getStringExtra("customerId");
+            customerToken = getIntent().getStringExtra("customerToken");
+            cusID = getIntent().getStringExtra("cusID");
         }
 
         mService = Common.getGoogleAPI();
         mFCMServices = Common.getFCMService();
 
+        handler = new Handler() ;
+
         btnStartTrip = (Button)findViewById(R.id.btnStartTrip);
+        btnWaiting = (Button)findViewById(R.id.btnWaiting);
+        btnWaiting.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if(btnWaiting.getText().equals("START WAITING")) {
+                    btnWaiting.setText("STOP WAITING");
+
+                    StartTime = SystemClock.uptimeMillis();
+                    handler.postDelayed(runnable, 0);
+
+                }else if(btnWaiting.getText().equals("STOP WAITING"))
+                {
+                    TimeBuff += MillisecondTime;
+                    btnWaiting.setText("START WAITING");
+                    MillisecondTime = 0L ;
+                    StartTime = 0L ;
+                    TimeBuff = 0L ;
+                    UpdateTime = 0L ;
+                    Seconds = 0 ;
+                    Minutes = 0 ;
+                    MilliSeconds = 0 ;
+                    handler.removeCallbacks(runnable);
+                }
+            }
+        });
+
         setUpLocation(riderLat,riderLng);
         btnStartTrip.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -152,6 +229,52 @@ public class DriverTracking extends FragmentActivity implements
             }
         });
     }
+
+    public Runnable runnable = new Runnable() {
+
+        public void run() {
+
+            MillisecondTime = SystemClock.uptimeMillis() - StartTime;
+
+            UpdateTime = TimeBuff + MillisecondTime;
+
+            Seconds = (int) (UpdateTime / 1000);
+
+            Minutes = Seconds / 60;
+
+            Seconds = Seconds % 60;
+
+            MilliSeconds = (int) (UpdateTime % 1000);
+
+            if (Common.currentDriver.getCarType().equals("DAGO X")) {
+                Common.waitingtime = Common.waitingtime + Minutes * Common.time_ratex;
+            } else if (Common.currentDriver.getCarType().equals("DAGO Black")) {
+                Common.waitingtime = Common.waitingtime + Minutes * Common.time_rateb;
+            }
+
+            Common.totfare = Common.distancefare+Common.waitingtime;
+
+            HashMap<String,String> map = new HashMap<>();
+            map.put("Rider", cusID);
+            map.put("distancefare",String.valueOf(Common.distancefare));
+            map.put("waitingfare",String.valueOf(Common.waitingtime));
+            map.put("total",String.valueOf(Common.totfare));
+            FirebaseDatabase.getInstance().getReference(Common.ongoing_tbl).child(FirebaseAuth.getInstance().getCurrentUser().getUid())
+                    .setValue(map)
+                    .addOnFailureListener(new OnFailureListener() {
+                        @Override
+                        public void onFailure(@NonNull Exception e) {
+                            Toast.makeText(DriverTracking.this, "Failed "+e.getMessage(), Toast.LENGTH_SHORT).show();
+                        }
+                    });
+
+            txtCurrFare.setText("Rs. " + Common.totfare);
+
+
+            handler.postDelayed(this, 60000);
+        }
+
+    };
 
     private void calculateCashFee(final Location pickUpLocation, Location mLastLocation) {
 
@@ -190,14 +313,14 @@ public class DriverTracking extends FragmentActivity implements
                                 String time_text = time.getString("text");
                                 Integer time_value = Integer.parseInt(time_text.replaceAll("\\D+",""));
 
-                                sendDropOffNotification(customerId,legsObject.getString("start_address"),legsObject.getString("end_address"),String.valueOf(time_value),String.valueOf(distance_value),Common.formulaPrice(distance_value,time_value));
+                                sendDropOffNotification(customerToken,legsObject.getString("start_address"),legsObject.getString("end_address"),String.valueOf(time_value),String.valueOf(distance_value),Common.formulaPrice(distance_value,time_value));
 
                                 Intent intent = new Intent(DriverTracking.this,TripDetails.class);
                                 intent.putExtra("start_address",legsObject.getString("start_address"));
                                 intent.putExtra("end_address",legsObject.getString("end_address"));
                                 intent.putExtra("time",String.valueOf(time_value));
                                 intent.putExtra("distance",String.valueOf(distance_value));
-                                intent.putExtra("total",Common.formulaPrice(distance_value,time_value));
+                                intent.putExtra("total",Common.totfare);
                                 intent.putExtra("location_start",String.format("%f,%f",pickUpLocation.getLatitude(),pickUpLocation.getLongitude()));
                                 intent.putExtra("location_end",String.format("%f,%f",Common.mLastLocation.getLatitude(),Common.mLastLocation.getLongitude()));
 
@@ -230,6 +353,7 @@ public class DriverTracking extends FragmentActivity implements
     }
 
 
+
     private void displayLocation(final String lat, final String lng)
     {
         if(ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED &&
@@ -260,6 +384,8 @@ public class DriverTracking extends FragmentActivity implements
                             if(direction != null)
                                 direction.remove(); // remove old directions
                             getDirection(lat,lng);
+
+                            displayCashFee(pickUpLocation,Common.mLastLocation);
                         }
                         else
                         {
@@ -311,6 +437,7 @@ public class DriverTracking extends FragmentActivity implements
     }
 
 
+    @SuppressLint("MissingPermission")
     @Override
     public void onMapReady(GoogleMap googleMap) {
 
@@ -343,8 +470,9 @@ public class DriverTracking extends FragmentActivity implements
         geoQuery.addGeoQueryEventListener(new GeoQueryEventListener() {
             @Override
             public void onKeyEntered(String key, GeoLocation location) {
-                sendArrivedNotification(customerId);
+                sendArrivedNotification(customerToken);
                 btnStartTrip.setEnabled(true);
+                btnWaiting.setVisibility(View.VISIBLE);
             }
 
             @Override
@@ -394,6 +522,7 @@ public class DriverTracking extends FragmentActivity implements
                 {
                     Common.mLastLocation = location;
                 }
+
                 if(btnStartTrip.getText().equals("DROP OFF HERE"))
                 {
                     displayLocation(destLat,destLng);
@@ -406,6 +535,90 @@ public class DriverTracking extends FragmentActivity implements
         };
     }
 
+    private void displayCashFee(final Location pickUpLocation, Location mLastLocation) {
+        String requestApi = null;
+
+        try{
+
+            requestApi = "https://maps.googleapis.com/maps/api/directions/json?"+
+                    "mode=driving&"+
+                    "transit_routing_preference=less_driving&"+
+                    "origin="+pickUpLocation.getLatitude()+","+pickUpLocation.getLongitude()+"&"+
+                    "destination="+mLastLocation.getLatitude()+","+mLastLocation.getLongitude()+"&"+
+                    "key="+getResources().getString(R.string.google_direction_api);
+
+            mService.getPath(requestApi)
+                    .enqueue(new Callback<String>() {
+                        @Override
+                        public void onResponse(Call<String> call, Response<String> response) {
+                            try {
+
+                                JSONObject jsonObject = new JSONObject(response.body().toString());
+                                JSONArray routes = jsonObject.getJSONArray("routes");
+
+                                JSONObject object = routes.getJSONObject(0);
+
+                                JSONArray legs = object.getJSONArray("legs");
+
+                                JSONObject legsObject = legs.getJSONObject(0);
+
+                                JSONObject distance = legsObject.getJSONObject("distance");
+                                String distance_text = distance.getString("text");
+                                Double distance_value = Double.parseDouble(distance_text.replaceAll("[^0-9\\\\.]+",""));
+
+
+                                if(distance_value<=1000 && Common.currentDriver.getCarType().equals("DAGO X"))
+                                {
+                                    Common.distancefare = Common.base_farex;
+                                }
+                                else if(distance_value>1000 && Common.currentDriver.getCarType().equals("DAGO X"))
+                                {
+                                    Common.distancefare = Common.base_farex + (distance_value-1000)*Common.distance_ratex;
+                                }
+                                else if(distance_value<=2000 && Common.currentDriver.getCarType().equals("DAGO Black"))
+                                {
+                                    Common.distancefare = Common.base_fareb;
+                                }
+                                else if(distance_value>2000 && Common.currentDriver.getCarType().equals("DAGO Black"))
+                                {
+                                    Common.distancefare = Common.base_fareb + (distance_value-2000)*Common.distance_rateb;
+                                }
+
+                                Common.totfare = Common.distancefare+Common.waitingtime ;
+
+                                txtCurrFare.setText("Rs. "+Common.totfare);
+
+                                HashMap<String,String> map = new HashMap<>();
+                                map.put("Rider", cusID);
+                                map.put("distancefare",String.valueOf(Common.distancefare));
+                                map.put("waitingfare",String.valueOf(Common.waitingtime));
+                                map.put("total",String.valueOf(Common.totfare));
+                                FirebaseDatabase.getInstance().getReference(Common.ongoing_tbl).child(FirebaseAuth.getInstance().getCurrentUser().getUid())
+                                        .setValue(map)
+                                        .addOnFailureListener(new OnFailureListener() {
+                                            @Override
+                                            public void onFailure(@NonNull Exception e) {
+                                                Toast.makeText(DriverTracking.this, "Failed "+e.getMessage(), Toast.LENGTH_SHORT).show();
+                                            }
+                                        });
+
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                            }
+                        }
+
+                        @Override
+                        public void onFailure(Call<String> call, Throwable t) {
+                            Toast.makeText(DriverTracking.this, ""+t.getMessage(), Toast.LENGTH_SHORT).show();
+                        }
+                    });
+
+        }catch (Exception e)
+        {
+            e.printStackTrace();
+        }
+    }
+
     private void sendArrivedNotification(String customerId) {
         Token token = new Token(customerId);
         /*Notification notification = new Notification("Driver Arrived!",String.format("The Driver %s has arrived at your location",Common.currentDriver.getName()));
@@ -413,6 +626,7 @@ public class DriverTracking extends FragmentActivity implements
 
         Map<String,String> content = new HashMap<>();
         content.put("title","Driver Arrived!");
+        content.put("driverID",FirebaseAuth.getInstance().getCurrentUser().getUid());
         content.put("message",String.format("The Driver %s has arrived at your location",Common.currentDriver.getName()));
         DataMessage dataMessage = new DataMessage(token.getToken(),content);
 
@@ -432,9 +646,10 @@ public class DriverTracking extends FragmentActivity implements
         });
     }
 
+
     private void sendDropOffNotification(String customerId, String start_address, String end_address, String time, String distance, double fee) {
         Token token = new Token(customerId);
-      /*  Notification notification = new Notification("Drop Off",customerId);
+      /*  Notification notification = new Notification("Drop Off",customerToken);
         Sender sender = new Sender(token.getToken(),notification);*/
 
         Map<String,String> content = new HashMap<>();
@@ -445,6 +660,7 @@ public class DriverTracking extends FragmentActivity implements
         content.put("time",time);
         content.put("distance",distance);
         content.put("total",String.valueOf(fee));
+        content.put("cartype",Common.currentDriver.getCarType());
         Log.i("SHEEEEEd",String.valueOf(fee));
         content.put("driverId",FirebaseAuth.getInstance().getCurrentUser().getUid());
         content.put("location_start",String.format("%f,%f",pickUpLocation.getLatitude(),pickUpLocation.getLongitude()));

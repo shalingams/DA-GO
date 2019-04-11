@@ -20,7 +20,10 @@ import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.Task;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.ValueEventListener;
 import com.sccodesoft.dago.Common.Common;
 
 import java.util.Calendar;
@@ -56,15 +59,37 @@ public class TripDetails extends FragmentActivity implements OnMapReadyCallback 
 
         doneTrip = (Button)findViewById(R.id.btnDone);
 
+        FirebaseDatabase.getInstance().getReference(Common.ongoing_tbl).child(FirebaseAuth.getInstance().getCurrentUser().getUid())
+                .addListenerForSingleValueEvent(new ValueEventListener() {
+                    @Override
+                    public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
+                        txtFee.setText("Rs."+dataSnapshot.child("total").getValue().toString());
+                        txtEstimatedPayout.setText("Rs."+dataSnapshot.child("total").getValue().toString());
+                        if(Common.currentDriver.getCarType().equals("DAGO X"))
+                            txtTime.setText(String.valueOf(Double.valueOf(dataSnapshot.child("waitingfare").getValue().toString())/Common.time_ratex)+" mins");
+                        else if(Common.currentDriver.getCarType().equals("DAGO Black"))
+                            txtTime.setText(String.valueOf(Double.valueOf(dataSnapshot.child("waitingfare").getValue().toString())/Common.time_rateb)+" mins");
+
+                    }
+
+                    @Override
+                    public void onCancelled(@NonNull DatabaseError databaseError) {
+
+                    }
+                });
+
         doneTrip.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+
+                FirebaseDatabase.getInstance().getReference(Common.ongoing_tbl).child(FirebaseAuth.getInstance().getCurrentUser().getUid())
+                        .removeValue();
 
                 HashMap driverHis = new HashMap();
                 driverHis.put("date", txtDate.getText());
                 driverHis.put("from", txtFrom.getText());
                 driverHis.put("to", txtTo.getText());
-                driverHis.put("fare", txtFee.getText());
+                driverHis.put("TotFare", txtFee.getText());
                 driverHis.put("duration", txtTime.getText());
                 driverHis.put("distance", txtDistance.getText());
 
@@ -107,10 +132,13 @@ public class TripDetails extends FragmentActivity implements OnMapReadyCallback 
             String date = String.format("%s, %d/%d",convertToDayOfWeek(calendar.get(Calendar.DAY_OF_WEEK)),calendar.get(Calendar.DAY_OF_MONTH),calendar.get(Calendar.MONTH));
             txtDate.setText(date);
 
-            txtFee.setText(String.format("Rs %.2f",getIntent().getDoubleExtra("total",0.0)));
-            txtEstimatedPayout.setText(String.format("Rs %.2f",getIntent().getDoubleExtra("total",0.0)));
-            txtBaseFare.setText(String.format("Rs %.2f",Common.base_fare));
-            txtTime.setText(String.format("%s min",getIntent().getStringExtra("time")));
+           // txtFee.setText(String.format("Rs %.2f",getIntent().getDoubleExtra("total",0.0)));
+           // txtEstimatedPayout.setText(String.format("Rs %.2f",getIntent().getDoubleExtra("total",0.0)));
+            if(Common.currentDriver.getCarType().equals("DAGO X"))
+                txtBaseFare.setText(String.format("Rs %.2f",Common.base_farex));
+            else if(Common.currentDriver.getCarType().equals("DAGO Black"))
+                txtBaseFare.setText(String.format("Rs %.2f",Common.base_farex));
+           // txtTime.setText(String.format("%s min",getIntent().getStringExtra("time")));
             txtDistance.setText(String.format("%s km",getIntent().getStringExtra("distance")));
             txtFrom.setText(getIntent().getStringExtra("start_address"));
             txtTo.setText(getIntent().getStringExtra("end_address"));

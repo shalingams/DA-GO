@@ -49,7 +49,7 @@ public class RateActivity extends AppCompatActivity {
     TextView txtFees,txtaTime,txtaDistance;
     LatLng dropOff;
 
-    String date,fee,distance,baseFare,time,from,to;
+    String date,fee,distance,baseFare,time,from,to,cartype;
 
     FirebaseDatabase database;
     DatabaseReference rateDetailRef;
@@ -81,17 +81,39 @@ public class RateActivity extends AppCompatActivity {
             Calendar calendar = Calendar.getInstance();
             date = String.format("%s, %d/%d",convertToDayOfWeek(calendar.get(Calendar.DAY_OF_WEEK)),calendar.get(Calendar.DAY_OF_MONTH),calendar.get(Calendar.MONTH));
 
-            fee = "Rs. "+getIntent().getStringExtra("total");
+            cartype = getIntent().getStringExtra("cartype");
 
-            baseFare = String.format("Rs %.2f",Common.base_fare);
-            time = String.format("%s min",getIntent().getStringExtra("time"));
+            if(cartype.equals("DAGO X"))
+                baseFare = String.format("Rs %.2f",Common.base_farex);
+            else if(cartype.equals("DAGO Black"))
+                baseFare = String.format("Rs %.2f",Common.base_fareb);
+
             distance = String.format("%s km",getIntent().getStringExtra("distance"));
             from = getIntent().getStringExtra("start_address");
             to = getIntent().getStringExtra("end_address");
         }
 
-        txtFees.setText(fee);
-        txtaTime.setText(time);
+        FirebaseDatabase.getInstance().getReference(Common.ongoing_tbl).child(Common.driverId)
+                .addListenerForSingleValueEvent(new ValueEventListener() {
+                    @Override
+                    public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
+                        txtFees.setText("Rs."+dataSnapshot.child("total").getValue().toString());
+                        if(cartype.equals("DAGO X"))
+                            txtaTime.setText(String.valueOf(Double.valueOf(dataSnapshot.child("waitingfare").getValue().toString())/Common.time_ratex)+" mins");
+                        else if(cartype.equals("DAGO Black"))
+                            txtaTime.setText(String.valueOf(Double.valueOf(dataSnapshot.child("waitingfare").getValue().toString())/Common.time_rateb)+" mins");
+                        time = txtaTime.getText().toString();
+                        fee = txtFees.getText().toString();
+                    }
+
+                    @Override
+                    public void onCancelled(@NonNull DatabaseError databaseError) {
+
+                    }
+                });
+
+
+
         txtaDistance.setText(distance);
 
         btnFeeDetails.setOnClickListener(new View.OnClickListener() {
