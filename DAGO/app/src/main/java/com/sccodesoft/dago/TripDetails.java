@@ -102,7 +102,6 @@ public class TripDetails extends FragmentActivity implements OnMapReadyCallback 
                             public void onComplete(@NonNull Task<Void> task) {
                                 Intent intent = new Intent(TripDetails.this,DriverHome.class);
                                 startActivity(intent);
-                                finish();
                             }
                         })
                         .addOnFailureListener(new OnFailureListener() {

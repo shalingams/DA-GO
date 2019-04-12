@@ -28,6 +28,7 @@ public class InTripActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_in_trip);
 
+
         txtArrived = (TextView)findViewById(R.id.txtArrived);
         ll1 = (LinearLayout)findViewById(R.id.ll1);
         ll2 = (LinearLayout)findViewById(R.id.ll2);
@@ -52,9 +53,11 @@ public class InTripActivity extends AppCompatActivity {
         FirebaseDatabase.getInstance().getReference(Common.ongoing_tbl).child(driverId).addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
-                Ride.setText(": Rs."+dataSnapshot.child("distancefare").getValue().toString());
-                Waiting.setText(": Rs."+dataSnapshot.child("waitingfare").getValue().toString());
-                Total.setText(": Rs."+dataSnapshot.child("total").getValue().toString());
+                if(dataSnapshot.exists()) {
+                    Ride.setText(": Rs." + dataSnapshot.child("distancefare").getValue().toString());
+                    Waiting.setText(": Rs." + dataSnapshot.child("waitingfare").getValue().toString());
+                    Total.setText(": Rs." + dataSnapshot.child("total").getValue().toString());
+                }
             }
 
             @Override

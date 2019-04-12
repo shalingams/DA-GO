@@ -20,12 +20,14 @@ public class Common
     public static double distancefare;
     public static double waitingtime;
     public static double totfare;
+    public static double distance;
 
     public static final int PICK_IMAGE_REQUEST = 9999;
 
     public static Driver currentDriver;
 
     public static Location mLastLocation=null;
+    public static Location tempLoc1,tempLoc2 = null;
 
     public static final String baseURL = "https://maps.googleapis.com";
     public static final String fcmURL = "https://fcm.googleapis.com";
@@ -40,6 +42,9 @@ public class Common
     public static double base_fareb = 140;
     public static double time_rateb = 4;
     public static double distance_rateb = 42;
+
+    public static double base_farexk = 80;
+    public static double distance_ratexk = 50;
 
     public static double formulaPrice(double km,int min)
     {

@@ -1,6 +1,7 @@
 package com.sccodesoft.dago.Service;
 
 import android.content.Intent;
+import android.util.Log;
 
 import com.google.android.gms.maps.model.LatLng;
 import com.google.firebase.auth.FirebaseAuth;
@@ -34,6 +35,7 @@ public class MyFirebaseMessaging extends FirebaseMessagingService {
             String destlat = data.get("destlat");
             String destlng = data.get("destlng");
             String customerid = data.get("customerid");
+            String isKandy = data.get("isKandy");
 
            // LatLng customer_location = new Gson().fromJson(message, LatLng.class);
 
@@ -44,6 +46,7 @@ public class MyFirebaseMessaging extends FirebaseMessagingService {
             intent.putExtra("destlng",destlng);
             intent.putExtra("customer", customer);
             intent.putExtra("cusid",customerid);
+            intent.putExtra("isKandy",isKandy);
 
             startActivity(intent);
         }

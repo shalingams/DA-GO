@@ -157,6 +157,7 @@ public class Home extends AppCompatActivity
 
     ImageView carDagoX,carDagoBlack;
     boolean isDagoX=true;
+    boolean isKandy=false;
 
     //Map Animation
     MapRipple mapRipple;
@@ -210,28 +211,6 @@ public class Home extends AppCompatActivity
 
         carDagoX = (ImageView)findViewById(R.id.select_dagoX);
         carDagoBlack = (ImageView)findViewById(R.id.select_dagoBlack);
-
-        FirebaseDatabase.getInstance().getReference(Common.ongoing_tbl)
-                .addListenerForSingleValueEvent(new ValueEventListener() {
-                    @Override
-                    public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
-                        for(DataSnapshot postSnapShot : dataSnapshot.getChildren())
-                        {
-                            if(postSnapShot.child("Rider").getValue().toString().equals(FirebaseAuth.getInstance().getCurrentUser().getUid()))
-                            {
-                                Intent intent = new Intent(Home.this,InTripActivity.class);
-                                intent.putExtra("arrived",true);
-                                intent.putExtra("driverId",postSnapShot.getKey());
-                                startActivity(intent);
-                            }
-                        }
-                    }
-
-                    @Override
-                    public void onCancelled(@NonNull DatabaseError databaseError) {
-
-                    }
-                });
 
         carDagoX.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -295,14 +274,39 @@ public class Home extends AppCompatActivity
 
         btnPickupRequest = (Button)findViewById(R.id.btnPickupRequest);
 
-        if(getIntent().getStringExtra("rated")=="rated")
+        if(getIntent().getExtras()  != null) {
+            if (getIntent().getStringExtra("rated").equals("rated")) {
+                btnPickupRequest.setText("SEARCH DRIVERS");
+
+                Common.driverId = "";
+                Common.isDriverFound = false;
+
+                btnPickupRequest.setEnabled(true);
+            }
+        }
+        else
         {
-            btnPickupRequest.setText("SEARCH DRIVERS");
+            FirebaseDatabase.getInstance().getReference(Common.ongoing_tbl)
+                    .addListenerForSingleValueEvent(new ValueEventListener() {
+                        @Override
+                        public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
+                            for(DataSnapshot postSnapShot : dataSnapshot.getChildren())
+                            {
+                                if(postSnapShot.child("Rider").getValue().toString().equals(FirebaseAuth.getInstance().getCurrentUser().getUid()))
+                                {
+                                    Intent intent = new Intent(Home.this,InTripActivity.class);
+                                    intent.putExtra("arrived",true);
+                                    intent.putExtra("driverId",postSnapShot.getKey());
+                                    startActivity(intent);
+                                }
+                            }
+                        }
 
-            Common.driverId = "";
-            Common.isDriverFound=false;
+                        @Override
+                        public void onCancelled(@NonNull DatabaseError databaseError) {
 
-            btnPickupRequest.setEnabled(true);
+                        }
+                    });
         }
 
         btnPickupRequest.setOnClickListener(new View.OnClickListener() {
@@ -313,7 +317,7 @@ public class Home extends AppCompatActivity
                 }
                 else if(Common.mDestination!=null) {
                     btnPickupRequest.setEnabled(false);
-                    Common.sendRequestToDriver(Common.driverId, mService, Home.this, Common.mLastLocation, Common.mDestination);
+                    Common.sendRequestToDriver(Common.driverId, mService, Home.this, Common.mLastLocation, Common.mDestination,isKandy);
                 }else
                 {
                         Toast.makeText(Home.this, "Please Select Destination..", Toast.LENGTH_SHORT).show();
@@ -336,11 +340,15 @@ public class Home extends AppCompatActivity
             @Override
             public void onPlaceSelected(@NonNull Place place) {
 
+                isKandy=false;
+
                 mPlaceLocation = place.getName()+", "+place.getAddress();
 
                 Location temp = new Location(LocationManager.GPS_PROVIDER);
                 temp.setLatitude(place.getLatLng().latitude);
                 temp.setLongitude(place.getLatLng().longitude);
+
+                checkKandy(temp);
 
                 Common.mLastLocation = temp;
 
@@ -373,7 +381,7 @@ public class Home extends AppCompatActivity
                 mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(place.getLatLng(),15.0f));
 
                 //Show bottom info
-                BottomSheetDialogFragment mBottomSheet = BottomSheetRiderFragment.newInstance(String.format("%f,%f",Common.mLastLocation.getLatitude(),Common.mLastLocation.getLongitude()),mPlaceDestination,false,isDagoX);
+                BottomSheetDialogFragment mBottomSheet = BottomSheetRiderFragment.newInstance(String.format("%f,%f",Common.mLastLocation.getLatitude(),Common.mLastLocation.getLongitude()),mPlaceDestination,false,isDagoX,isKandy);
                 mBottomSheet.show(getSupportFragmentManager(),mBottomSheet.getTag());
             }
 
@@ -388,6 +396,18 @@ public class Home extends AppCompatActivity
 
         updateFirebaseToken();
 
+    }
+
+    private void checkKandy(Location temp) {
+        Location d = new Location("Kandy Center");
+        d.setLatitude(7.289616);
+        d.setLongitude(80.632326);
+
+       if (temp.distanceTo(d) <= 4000)
+       {
+           isKandy=true;
+           Log.i("ISKANDYd",String.valueOf(isKandy));
+       }
     }
 
     private void updateFirebaseToken() {
@@ -615,6 +635,11 @@ public class Home extends AppCompatActivity
 
     public void setLocationAddress(double lat, double lng) {
         Geocoder geocoder = new Geocoder(Home.this, Locale.getDefault());
+        isKandy=false;
+        Location loc = new Location("tem");
+        loc.setLatitude(lat);
+        loc.setLongitude(lng);
+        checkKandy(loc);
         try {
             List<Address> addresses = geocoder.getFromLocation(lat, lng, 1);
             Address obj = addresses.get(0);
@@ -1005,7 +1030,7 @@ public class Home extends AppCompatActivity
                 mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng,15.0f));
 
                 BottomSheetDialogFragment mBottomSheet = BottomSheetRiderFragment.newInstance(String.format("%f,%f",Common.mLastLocation.getLatitude(),Common.mLastLocation.getLongitude())
-                                                            ,String.format("%f,%f",latLng.latitude,latLng.longitude),true,isDagoX);
+                                                            ,String.format("%f,%f",latLng.latitude,latLng.longitude),true,isDagoX,isKandy);
                 mBottomSheet.show(getSupportFragmentManager(),mBottomSheet.getTag());
             }
         });
@@ -1038,6 +1063,7 @@ public class Home extends AppCompatActivity
             Intent intent = new Intent(Home.this,CallDriver.class);
             String driveridc =marker.getSnippet().substring(12);
             intent.putExtra("driverId",driveridc);
+            intent.putExtra("isKandy",isKandy);
             intent.putExtra("lat",Common.mLastLocation.getLatitude());
             intent.putExtra("lng",Common.mLastLocation.getLongitude());
 

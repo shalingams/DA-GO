@@ -51,6 +51,8 @@ public class CustomerCall extends AppCompatActivity {
 
     int Accpet;
 
+    boolean isKandy;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -88,6 +90,7 @@ public class CustomerCall extends AppCompatActivity {
                 intent.putExtra("destlng",destlng);
                 intent.putExtra("customerToken",customerId);
                 intent.putExtra("cusID",cusID);
+                intent.putExtra("isKandy",isKandy);
 
                 Accpet = 1;
 
@@ -114,7 +117,14 @@ public class CustomerCall extends AppCompatActivity {
             destlng = getIntent().getStringExtra("destlng");
             customerId = getIntent().getStringExtra("customer");
             cusID = getIntent().getStringExtra("cusid");
-
+            if(getIntent().getStringExtra("isKandy").equals("true"))
+            {
+                isKandy=true;
+            }
+            else
+            {
+                isKandy=false;
+            }
             getDirection(lat,lng);
         }
 

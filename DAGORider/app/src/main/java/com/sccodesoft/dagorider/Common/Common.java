@@ -69,12 +69,19 @@ public class Common {
     public static double time_rateb = 4;
     public static double distance_rateb = 42;
 
-    public static double getPrice(double km,int min,boolean isDAGOX)
+    public static double base_farexk = 80;
+    public static double distance_ratexk = 50;
+
+
+    public static double getPrice(double km,int min,boolean isDAGOX,boolean isKandy)
     {
-        if(isDAGOX)
+        if(isDAGOX && isKandy)
+            return(base_farexk+(time_ratex*min)+(distance_ratexk*(km-1)));
+        else if (isDAGOX)
             return(base_farex+(time_ratex*min)+(distance_ratex*(km-1)));
         else
             return(base_fareb+(time_rateb*min)+(distance_rateb*(km-2)));
+
     }
 
     public static IFCMServices getFCMService()
@@ -87,7 +94,7 @@ public class Common {
         return GoogleMapAPI.getClient(googleAPIUrl).create(IGoogleAPI.class);
     }
 
-    public static void sendRequestToDriver(String driverId, final IFCMServices mService, final Context context, final Location currentLocation, final LatLng destination) {
+    public static void sendRequestToDriver(String driverId, final IFCMServices mService, final Context context, final Location currentLocation, final LatLng destination, final boolean isKandy) {
         DatabaseReference tokens = FirebaseDatabase.getInstance().getReference(Common.token_tbl);
 
         tokens.orderByKey().equalTo(driverId)
@@ -111,6 +118,7 @@ public class Common {
                             content.put("lng",String.valueOf(currentLocation.getLongitude()));
                             content.put("destlat", String.valueOf(destination.latitude));
                             content.put("destlng", String.valueOf(destination.longitude));
+                            content.put("isKandy", String.valueOf(isKandy));
                             DataMessage dataMessage = new DataMessage(token.getToken(),content);
 
 

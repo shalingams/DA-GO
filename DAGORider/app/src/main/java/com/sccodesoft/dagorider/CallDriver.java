@@ -33,6 +33,8 @@ public class CallDriver extends AppCompatActivity {
     String driverId;
     Location mLastLocation;
 
+    boolean isKandy;
+
     IFCMServices mService;
 
     @Override
@@ -45,6 +47,8 @@ public class CallDriver extends AppCompatActivity {
             driverId = getIntent().getStringExtra("driverId");
             double lat = getIntent().getDoubleExtra("lat",-1.0);
             double lng = getIntent().getDoubleExtra("lng",-1.0);
+
+            isKandy = getIntent().getBooleanExtra("isKandy",false);
 
             mLastLocation = new Location("");
             mLastLocation.setLatitude(lat);
@@ -65,7 +69,7 @@ public class CallDriver extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 if (driverId != null && !driverId.isEmpty())
-                    Common.sendRequestToDriver(driverId, mService, getBaseContext(), mLastLocation,Common.mDestination);
+                    Common.sendRequestToDriver(driverId, mService, getBaseContext(), mLastLocation,Common.mDestination,isKandy);
             }
         });
 

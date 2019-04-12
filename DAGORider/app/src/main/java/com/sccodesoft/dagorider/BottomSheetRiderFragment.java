@@ -25,13 +25,13 @@ import retrofit2.Response;
 public class BottomSheetRiderFragment extends BottomSheetDialogFragment {
     String mLocation,mDestination;
 
-    boolean isTapOnMap,isDagoX;
+    boolean isTapOnMap,isDagoX,isKandy;
 
     IGoogleAPI mService;
 
     TextView txtCalculate,txtLocation,txtDestination;
 
-    public static BottomSheetDialogFragment newInstance(String location,String destination,boolean isTapOnMap,boolean isDagoX)
+    public static BottomSheetDialogFragment newInstance(String location,String destination,boolean isTapOnMap,boolean isDagoX,boolean isKandy)
     {
         BottomSheetDialogFragment fragment = new BottomSheetRiderFragment();
         Bundle args = new Bundle();
@@ -39,6 +39,7 @@ public class BottomSheetRiderFragment extends BottomSheetDialogFragment {
         args.putString("destination",destination);
         args.putBoolean("isTapOnMap",isTapOnMap);
         args.putBoolean("isDagoX",isDagoX);
+        args.putBoolean("isKandy",isKandy);
         fragment.setArguments(args);
         return fragment;
     }
@@ -50,6 +51,7 @@ public class BottomSheetRiderFragment extends BottomSheetDialogFragment {
         mDestination = getArguments().getString("destination");
         isTapOnMap = getArguments().getBoolean("isTapOnMap");
         isDagoX = getArguments().getBoolean("isDagoX");
+        isKandy = getArguments().getBoolean("isKandy");
     }
 
     @Nullable
@@ -110,7 +112,7 @@ public class BottomSheetRiderFragment extends BottomSheetDialogFragment {
                         Integer time_value = Integer.parseInt(time_text.replaceAll("\\D+",""));
 
                         String final_calculate = String.format("%s + %s = Rs.%.2f",distance_text,time_text,
-                                                     Common.getPrice(distance_value,time_value,isDagoX));
+                                                     Common.getPrice(distance_value,time_value,isDagoX,isKandy));
 
                         txtCalculate.setText(final_calculate);
 
