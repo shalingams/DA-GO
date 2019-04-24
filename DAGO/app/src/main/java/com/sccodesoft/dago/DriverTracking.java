@@ -63,6 +63,8 @@ import com.sccodesoft.dago.Remote.IGoogleApi;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
@@ -84,6 +86,8 @@ public class DriverTracking extends FragmentActivity implements
     String destLat;
     String destLng;
     String customerToken, cusID;
+
+    IFCMServices mFCMService;
 
     private static final int PLAY_SERVICE_RES_REQUEST = 7001;
 
@@ -132,6 +136,17 @@ public class DriverTracking extends FragmentActivity implements
                 .findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
 
+        mFCMService = Common.getFCMService();
+
+        if (getIntent() != null) {
+            riderLat = getIntent().getStringExtra("lat");
+            riderLng = getIntent().getStringExtra("lng");
+            destLat = getIntent().getStringExtra("destlat");
+            destLng = getIntent().getStringExtra("destlng");
+            customerToken = getIntent().getStringExtra("customerToken");
+            cusID = getIntent().getStringExtra("cusID");
+            isKandy = getIntent().getBooleanExtra("isKandy", false);
+        }
 
         txtCurrFare = (TextView) findViewById(R.id.txtCurrFare);
 
@@ -148,8 +163,39 @@ public class DriverTracking extends FragmentActivity implements
                     map.put("distancefare", String.valueOf(Common.distancefare));
                     map.put("waitingfare", String.valueOf(Common.waitingtime));
                     map.put("total", String.valueOf(Common.totfare));
+                    map.put("pickuplat",riderLat);
+                    map.put("pickuplng",riderLng);
+                    map.put("destLat",destLat);
+                    map.put("destLng",destLng);
+                    map.put("customerToken",customerToken);
+                    map.put("isKandy",String.valueOf(isKandy));
                     FirebaseDatabase.getInstance().getReference(Common.ongoing_tbl).child(FirebaseAuth.getInstance().getCurrentUser().getUid())
                             .setValue(map)
+                            .addOnSuccessListener(new OnSuccessListener<Void>() {
+                                @Override
+                                public void onSuccess(Void aVoid) {
+                                    Map<String,String> content = new HashMap<>();
+                                    content.put("title","Request Tracked!");
+                                    content.put("driverID",FirebaseAuth.getInstance().getCurrentUser().getUid());
+                                    DataMessage dataMessage = new DataMessage(customerToken,content);
+
+                                    mFCMService.sendMessage(dataMessage)
+                                            .enqueue(new Callback<FCMResponse>() {
+                                                @Override
+                                                public void onResponse(Call<FCMResponse> call, Response<FCMResponse> response) {
+                                                    if(response.body().success==1)
+                                                    {
+                                                        Toast.makeText(DriverTracking.this, "Request Tracked..", Toast.LENGTH_SHORT).show();
+                                                    }
+                                                }
+
+                                                @Override
+                                                public void onFailure(Call<FCMResponse> call, Throwable t) {
+
+                                                }
+                                            });
+                                }
+                            })
                             .addOnFailureListener(new OnFailureListener() {
                                 @Override
                                 public void onFailure(@NonNull Exception e) {
@@ -160,6 +206,15 @@ public class DriverTracking extends FragmentActivity implements
                     Common.distancefare = Double.valueOf(dataSnapshot.child("distancefare").getValue().toString());
                     Common.waitingtime = Double.valueOf(dataSnapshot.child("waitingfare").getValue().toString());
                     Common.totfare = Double.valueOf(dataSnapshot.child("total").getValue().toString());
+
+                    riderLat = dataSnapshot.child("pickuplat").getValue().toString();
+                    riderLng = dataSnapshot.child("pickuplng").getValue().toString();
+                    destLat = dataSnapshot.child("destLat").getValue().toString();
+                    destLng = dataSnapshot.child("destLng").getValue().toString();
+                    customerToken = dataSnapshot.child("customerToken").getValue().toString();
+                    cusID = dataSnapshot.child("Rider").getValue().toString();
+                    isKandy = dataSnapshot.child("isKandy").getValue().equals("true")?true:false;
+
                     Toast.makeText(DriverTracking.this, "Previous Trip Loaded..", Toast.LENGTH_SHORT).show();
                 }
             }
@@ -172,15 +227,7 @@ public class DriverTracking extends FragmentActivity implements
 
         fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this);
 
-        if (getIntent() != null) {
-            riderLat = getIntent().getStringExtra("lat");
-            riderLng = getIntent().getStringExtra("lng");
-            destLat = getIntent().getStringExtra("destlat");
-            destLng = getIntent().getStringExtra("destlng");
-            customerToken = getIntent().getStringExtra("customerToken");
-            cusID = getIntent().getStringExtra("cusID");
-            isKandy = getIntent().getBooleanExtra("isKandy", false);
-        }
+
 
         mService = Common.getGoogleAPI();
         mFCMServices = Common.getFCMService();
@@ -232,17 +279,43 @@ public class DriverTracking extends FragmentActivity implements
 
                     distanceCheck();
 
+                    sendStartNotification(customerToken);
+
                     StartTime = SystemClock.uptimeMillis();
                     handler.postDelayed(runnable, 5000);
 
                     // StartTripTime = Calendar.getInstance().getTime();
                 } else if (btnStartTrip.getText().equals("DROP OFF HERE")) {
+                    handler.removeCallbacks(runnable);
                     FirebaseDatabase.getInstance().getReference(Common.user_driver_tbl).
                             child(FirebaseAuth.getInstance().getCurrentUser().getUid()).child("reserved").setValue("0");
                     calculateCashFee(pickUpLocation, Common.mLastLocation);
                 }
             }
         });
+    }
+
+    private void sendStartNotification(String customerToken) {
+        Map<String,String> content = new HashMap<>();
+        content.put("title","Start Trip!");
+        content.put("driverID",FirebaseAuth.getInstance().getCurrentUser().getUid());
+        DataMessage dataMessage = new DataMessage(customerToken,content);
+
+        mFCMService.sendMessage(dataMessage)
+                .enqueue(new Callback<FCMResponse>() {
+                    @Override
+                    public void onResponse(Call<FCMResponse> call, Response<FCMResponse> response) {
+                        if(response.body().success==1)
+                        {
+                            Toast.makeText(DriverTracking.this, "Trip Started..", Toast.LENGTH_SHORT).show();
+                        }
+                    }
+
+                    @Override
+                    public void onFailure(Call<FCMResponse> call, Throwable t) {
+
+                    }
+                });
     }
 
     public Runnable runnable = new Runnable() {
@@ -277,14 +350,14 @@ public class DriverTracking extends FragmentActivity implements
             {
 
                 if (Common.currentDriver.getCarType().equals("DAGO X")) {
-                    Common.waitingtime = Common.waitingtime + ((0.1) * Common.time_ratex);
+                    Common.waitingtime = round(Common.waitingtime + ((0.1) * Common.time_ratex),2);
                 } else if (Common.currentDriver.getCarType().equals("DAGO Black")) {
-                    Common.waitingtime = Common.waitingtime + ((0.1) * Common.time_rateb);
+                    Common.waitingtime = round(Common.waitingtime + ((0.1) * Common.time_rateb),2);
                 }
             }
             else
             {
-                Common.distance = Common.distance + Common.tempLoc1.distanceTo(Common.tempLoc2);
+                Common.distance = round(Common.distance + Common.tempLoc1.distanceTo(Common.tempLoc2),2);
                 distanceCheck();
 
             }
@@ -296,6 +369,13 @@ public class DriverTracking extends FragmentActivity implements
             map.put("distancefare",String.valueOf(Common.distancefare));
             map.put("waitingfare",String.valueOf(Common.waitingtime));
             map.put("total",String.valueOf(Common.totfare));
+            map.put("pickuplat",riderLat);
+            map.put("pickuplng",riderLng);
+            map.put("destLat",destLat);
+            map.put("destLng",destLng);
+            map.put("customerToken",customerToken);
+            map.put("isKandy",String.valueOf(isKandy));
+
             FirebaseDatabase.getInstance().getReference(Common.ongoing_tbl).child(FirebaseAuth.getInstance().getCurrentUser().getUid())
                     .setValue(map)
                     .addOnFailureListener(new OnFailureListener() {
@@ -325,11 +405,11 @@ public class DriverTracking extends FragmentActivity implements
         }
         else if(Common.distance>1000 && Common.currentDriver.getCarType().equals("DAGO X") && isKandy)
         {
-            Common.distancefare = Common.base_farexk + ((Common.distance-1000)/1000)*Common.distance_ratexk;
+            Common.distancefare = round((Common.base_farexk + ((Common.distance-1000)/1000)*Common.distance_ratexk),2);
         }
         else if(Common.distance>1000 && Common.currentDriver.getCarType().equals("DAGO X"))
         {
-            Common.distancefare = Common.base_farex + ((Common.distance-1000)/1000)*Common.distance_ratex;
+            Common.distancefare = round((Common.base_farex + ((Common.distance-1000)/1000)*Common.distance_ratex),2);
         }
         else if(Common.distance<=2000 && Common.currentDriver.getCarType().equals("DAGO Black"))
         {
@@ -337,7 +417,7 @@ public class DriverTracking extends FragmentActivity implements
         }
         else if(Common.distance>2000 && Common.currentDriver.getCarType().equals("DAGO Black"))
         {
-            Common.distancefare = Common.base_fareb + ((Common.distance-2000)/1000)*Common.distance_rateb;
+            Common.distancefare = round((Common.base_fareb + ((Common.distance-2000)/1000)*Common.distance_rateb),2);
         }
     }
 
@@ -384,7 +464,7 @@ public class DriverTracking extends FragmentActivity implements
                                 intent.putExtra("start_address",legsObject.getString("start_address"));
                                 intent.putExtra("end_address",legsObject.getString("end_address"));
                                 intent.putExtra("time",String.valueOf(time_value));
-                                intent.putExtra("distance",String.valueOf(Common.distance/1000));
+                                intent.putExtra("distance",String.valueOf(round((Common.distance/1000),2)));
                                 intent.putExtra("total",Common.totfare);
                                 intent.putExtra("location_start",String.format("%f,%f",pickUpLocation.getLatitude(),pickUpLocation.getLongitude()));
                                 intent.putExtra("location_end",String.format("%f,%f",Common.mLastLocation.getLatitude(),Common.mLastLocation.getLongitude()));
@@ -417,6 +497,13 @@ public class DriverTracking extends FragmentActivity implements
 
     }
 
+    public static double round(double value, int places) {
+        if (places < 0) throw new IllegalArgumentException();
+
+        BigDecimal bd = new BigDecimal(value);
+        bd = bd.setScale(places, RoundingMode.HALF_UP);
+        return bd.doubleValue();
+    }
 
 
     private void displayLocation(final String lat, final String lng)
@@ -610,15 +697,15 @@ public class DriverTracking extends FragmentActivity implements
         };
     }
 
-    private void displayCashFee(final Location pickUpLocation, Location mLastLocation, final boolean isKandy) {
+  /*  private void displayCashFee(final Location pickUpLocation, Location mLastLocation, final boolean isKandy) {
         String requestApi = null;
 
-        /*Date currentTime = Calendar.getInstance().getTime();
+        *//*Date currentTime = Calendar.getInstance().getTime();
 
         long diff = currentTime.getTime() - StartTripTime.getTime();
         final long elapsed_seconds = diff / 1000;
 
-        Log.i("CUUTIME",String.valueOf(currentTime));*/
+        Log.i("CUUTIME",String.valueOf(currentTime));*//*
 
         try{
 
@@ -676,14 +763,14 @@ public class DriverTracking extends FragmentActivity implements
 
 
 
-                              /*  if(distance_value/elapsed_seconds<3)
+                              *//*  if(distance_value/elapsed_seconds<3)
                                 {
                                     if (Common.currentDriver.getCarType().equals("DAGO X")) {
                                         Common.waitingtime = Common.waitingtime + (elapsed_seconds/60) * Common.time_ratex;
                                     } else if (Common.currentDriver.getCarType().equals("DAGO Black")) {
                                         Common.waitingtime = Common.waitingtime + (elapsed_seconds/60) * Common.time_rateb;
                                     }
-                                }*/
+                                }*//*
 
                                 Common.totfare = Common.distancefare+Common.waitingtime ;
 
@@ -719,7 +806,7 @@ public class DriverTracking extends FragmentActivity implements
             e.printStackTrace();
         }
     }
-
+*/
     private void sendArrivedNotification(String customerId) {
         Token token = new Token(customerId);
         /*Notification notification = new Notification("Driver Arrived!",String.format("The Driver %s has arrived at your location",Common.currentDriver.getName()));
@@ -762,8 +849,7 @@ public class DriverTracking extends FragmentActivity implements
         content.put("distance",String.valueOf(Common.distance/1000));
         content.put("total",String.valueOf(fee));
         content.put("cartype",Common.currentDriver.getCarType());
-        Log.i("SHEEEEEd",String.valueOf(fee));
-        content.put("driverId",FirebaseAuth.getInstance().getCurrentUser().getUid());
+        content.put("driverID",FirebaseAuth.getInstance().getCurrentUser().getUid());
         content.put("location_start",String.format("%f,%f",pickUpLocation.getLatitude(),pickUpLocation.getLongitude()));
         content.put("location_end",String.format("%f,%f",Common.mLastLocation.getLatitude(),Common.mLastLocation.getLongitude()));
 

@@ -71,15 +71,14 @@ public class MyFirebaseMessaging extends FirebaseMessagingService {
                 Intent intent = new Intent(this, InTripActivity.class);
                // intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
                 intent.putExtra("arrived",true);
-                intent.putExtra("driverId",data.get("driverID"));
+                intent.putExtra("driverID",data.get("driverID"));
                 startActivity(intent);
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
                     showArrivedNotificationAPI26(message);
                 else
                     showArrivedNotification(message);
             } else if (title.equals("Drop Off")) {
-
-                String driverid = data.get("driverId");
+                String driverid = data.get("driverID");
                 String start_address = data.get("start_address");
                 String end_address = data.get("end_address");
                 String time = data.get("time");
@@ -91,9 +90,24 @@ public class MyFirebaseMessaging extends FirebaseMessagingService {
                 openRatingActivity(message,start_address,end_address,time,distance,total,location_start,location_end,cartype,driverid);
             }
             else if (title.equals("Request Accepted!")) {
-                Common.driverId = data.get("driverid");
-                Intent intent = new Intent(this, InTripActivity.class);
+                Common.driverId = data.get("driverID");
+                /*Intent intent = new Intent(this, InTripActivity.class);
+                intent.putExtra("driverID",Common.driverId);
                // intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                startActivity(intent);*/
+            }
+            else if (title.equals("Request Tracked!")) {
+                Common.driverId = data.get("driverID");
+                Intent intent = new Intent(this, InTripActivity.class);
+                intent.putExtra("driverID",Common.driverId);
+               // intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                startActivity(intent);
+            }
+            else if (title.equals("Start Trip!")) {
+                Intent intent = new Intent(this, InTripActivity.class);
+                // intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                intent.putExtra("arrived",true);
+                intent.putExtra("driverID",data.get("driverID"));
                 startActivity(intent);
             }
         }
@@ -117,7 +131,7 @@ public class MyFirebaseMessaging extends FirebaseMessagingService {
                 .sendBroadcast(new Intent(Common.DROPOFF_BROADCAST_STRING));
 
         Intent intent = new Intent(this,RateActivity.class);
-        intent.putExtra("driverId",driverid);
+        intent.putExtra("driverID",driverid);
         intent.putExtra("start_address",start_address);
         intent.putExtra("end_address",end_address);
         intent.putExtra("time",time);

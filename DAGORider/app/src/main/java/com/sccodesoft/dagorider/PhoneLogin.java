@@ -4,7 +4,9 @@ import android.app.AlertDialog;
 import android.app.ProgressDialog;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.net.Uri;
+import android.preference.PreferenceManager;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v7.app.AppCompatActivity;
@@ -13,6 +15,8 @@ import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.Button;
+import android.widget.CheckBox;
+import android.widget.CompoundButton;
 import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
@@ -76,6 +80,10 @@ public class PhoneLogin extends AppCompatActivity {
 
     CircleImageView image_upload;
 
+    CheckBox tnc;
+
+    Boolean agreedtnc=false;
+
     private PhoneAuthProvider.OnVerificationStateChangedCallbacks mCallbacks;
 
     @Override
@@ -88,6 +96,7 @@ public class PhoneLogin extends AppCompatActivity {
         verificationCode = (MaterialEditText)findViewById(R.id.edtVerificationCode);
         txt94 = (TextView)findViewById(R.id.txt94);
         iconphone = (ImageView)findViewById(R.id.iconphone);
+        tnc = (CheckBox)findViewById(R.id.chktnc);
         loadingBar = new ProgressDialog(this);
 
         waitingDialog = new SpotsDialog(PhoneLogin.this);
@@ -99,6 +108,21 @@ public class PhoneLogin extends AppCompatActivity {
 
         mAuth = FirebaseAuth.getInstance();
 
+        tnc.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                if(isChecked)
+                {
+                    Toast.makeText(PhoneLogin.this, "Please Read the Terms & Conditions First..", Toast.LENGTH_SHORT).show();
+                    showTermsConditions();
+                }
+                else
+                {
+                    agreedtnc = false;
+                }
+            }
+        });
+
         sendCode.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -106,8 +130,12 @@ public class PhoneLogin extends AppCompatActivity {
                 if(sendCode.getText().toString().equals("Send Verification Code")) {
                     String phoneNumb = "+94"+phoneNumber.getText().toString();
 
-                    if (TextUtils.isEmpty(phoneNumb)) {
+                    if (TextUtils.isEmpty(phoneNumber.getText().toString())) {
                         Toast.makeText(PhoneLogin.this, "Please Enter Your Phone Number..", Toast.LENGTH_SHORT).show();
+                    }
+                    else if (agreedtnc==false) {
+                        Toast.makeText(PhoneLogin.this, "Please Read and Accept Terms & Conditions..", Toast.LENGTH_SHORT).show();
+                        showTermsConditions();
                     } else {
                         sendVerification(phoneNumb);
                     }
@@ -174,6 +202,37 @@ public class PhoneLogin extends AppCompatActivity {
 
             }
         };
+    }
+
+    private void showTermsConditions() {
+
+        AlertDialog.Builder dialog = new AlertDialog.Builder(this);
+
+        LayoutInflater inflater = LayoutInflater.from(this);
+        View tnc_layout = inflater.inflate(R.layout.layout_tnc,null);
+
+        dialog.setView(tnc_layout);
+
+        dialog.setPositiveButton("ACCEPT", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialogInterface, int which) {
+                agreedtnc=true;
+                tnc.setChecked(true);
+                dialogInterface.dismiss();
+            }
+        });
+
+        dialog.setNegativeButton("DECLINE", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialogInterface, int which) {
+                agreedtnc=false;
+                tnc.setChecked(false);
+                dialogInterface.dismiss();
+            }
+        });
+
+        dialog.show();
+
     }
 
     private void sendVerification(String phonenu) {

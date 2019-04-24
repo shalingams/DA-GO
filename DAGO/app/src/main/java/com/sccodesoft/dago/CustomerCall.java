@@ -139,7 +139,7 @@ public class CustomerCall extends AppCompatActivity {
 
         Map<String,String> content = new HashMap<>();
         content.put("title","Request Accepted!");
-        content.put("driverid",FirebaseAuth.getInstance().getCurrentUser().getUid());
+        content.put("driverID",FirebaseAuth.getInstance().getCurrentUser().getUid());
         DataMessage dataMessage = new DataMessage(token.getToken(),content);
 
         mFCMService.sendMessage(dataMessage)

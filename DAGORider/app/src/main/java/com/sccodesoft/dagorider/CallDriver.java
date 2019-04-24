@@ -44,7 +44,7 @@ public class CallDriver extends AppCompatActivity {
 
         if(getIntent()!=null)
         {
-            driverId = getIntent().getStringExtra("driverId");
+            driverId = getIntent().getStringExtra("driverID");
             double lat = getIntent().getDoubleExtra("lat",-1.0);
             double lng = getIntent().getDoubleExtra("lng",-1.0);
 

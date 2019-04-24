@@ -23,6 +23,30 @@
           }
         },
         {
+          "client_id": "399671189784-rkhggk736kf0smq2v0ssmnbv8n86ca5n.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.sccodesoft.dago",
+            "certificate_hash": "fabc6bfa900f1247a4743ca2d9a5f58f5d5f9d9a"
+          }
+        },
+        {
+          "client_id": "399671189784-5qu69rg1psgaq2n6djv5b3ohel8dnoam.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.sccodesoft.dago",
+            "certificate_hash": "3cefbdca0e022ca19b118b71910edc43dbff60d4"
+          }
+        },
+        {
+          "client_id": "399671189784-r14319flikiroh20vgu7f7crvkg2qare.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.sccodesoft.dago",
+            "certificate_hash": "7e7bbaf2b5e0f6e4c987444727e47435261ef9d0"
+          }
+        },
+        {
           "client_id": "399671189784-g7k96lqm7r9ilopcfrgomldf2ui8klfn.apps.googleusercontent.com",
           "client_type": 3
         }
@@ -33,20 +57,13 @@
         }
       ],
       "services": {
-        "analytics_service": {
-          "status": 1
-        },
         "appinvite_service": {
-          "status": 2,
           "other_platform_oauth_client": [
             {
               "client_id": "399671189784-g7k96lqm7r9ilopcfrgomldf2ui8klfn.apps.googleusercontent.com",
               "client_type": 3
             }
           ]
-        },
-        "ads_service": {
-          "status": 2
         }
       }
     },
@@ -59,19 +76,11 @@
       },
       "oauth_client": [
         {
-          "client_id": "399671189784-olu0u4vphlaejobqfkvejahqift3srqd.apps.googleusercontent.com",
+          "client_id": "399671189784-rhlsu7d8bku8m0v52ic1o7nu8bgocs5o.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
             "package_name": "com.sccodesoft.dagorider",
-            "certificate_hash": "57330327c2c89ae523c70f210c34c6eef0f69e30"
-          }
-        },
-        {
-          "client_id": "399671189784-5jl5jjrkh7inmbe71auu64m6bsnpvros.apps.googleusercontent.com",
-          "client_type": 1,
-          "android_info": {
-            "package_name": "com.sccodesoft.dagorider",
-            "certificate_hash": "2705a7cd99afcc0ceb8eb597df1ec4fc7cc52f8b"
+            "certificate_hash": "3651323eeb8ef9d52ba2d7bdf4e7fa13e570cd52"
           }
         },
         {
@@ -85,20 +94,13 @@
         }
       ],
       "services": {
-        "analytics_service": {
-          "status": 1
-        },
         "appinvite_service": {
-          "status": 2,
           "other_platform_oauth_client": [
             {
               "client_id": "399671189784-g7k96lqm7r9ilopcfrgomldf2ui8klfn.apps.googleusercontent.com",
               "client_type": 3
             }
           ]
-        },
-        "ads_service": {
-          "status": 2
         }
       }
     }

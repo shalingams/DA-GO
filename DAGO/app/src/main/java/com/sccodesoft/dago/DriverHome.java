@@ -709,10 +709,60 @@ public class DriverHome extends AppCompatActivity
         }else if (id == R.id.nav_myInvCode) {
             showInviteCode();
         }
+        else if(id == R.id.nav_tnc)
+        {
+            showTermsConditions();
+        }
+        else if(id == R.id.nav_privacy)
+        {
+            String url = "https://dagosrilanka.wixsite.com/dago";
+            Intent i = new Intent(Intent.ACTION_VIEW);
+            i.setData(Uri.parse(url));
+            startActivity(i);
+           // showPrivacy();
+        }
 
         DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
         drawer.closeDrawer(GravityCompat.START);
         return true;
+    }
+
+    private void showPrivacy() {
+        android.app.AlertDialog.Builder dialog = new android.app.AlertDialog.Builder(this);
+
+        LayoutInflater inflater = LayoutInflater.from(this);
+        View pr_layout = inflater.inflate(R.layout.layout_privacy,null);
+
+        dialog.setView(pr_layout);
+
+        dialog.setPositiveButton("OK", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialogInterface, int which) {
+                dialogInterface.dismiss();
+            }
+        });
+
+        dialog.show();
+    }
+
+    private void showTermsConditions() {
+
+        android.app.AlertDialog.Builder dialog = new android.app.AlertDialog.Builder(this);
+
+        LayoutInflater inflater = LayoutInflater.from(this);
+        View tnc_layout = inflater.inflate(R.layout.layout_tnc,null);
+
+        dialog.setView(tnc_layout);
+
+        dialog.setPositiveButton("OK", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialogInterface, int which) {
+                dialogInterface.dismiss();
+            }
+        });
+
+        dialog.show();
+
     }
 
     private void showInviteCode() {

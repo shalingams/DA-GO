@@ -77,7 +77,7 @@ public class RateActivity extends AppCompatActivity {
 
         if(getIntent() != null)
         {
-            Common.driverId = getIntent().getStringExtra("driverId");
+            Common.driverId = getIntent().getStringExtra("driverID");
             Calendar calendar = Calendar.getInstance();
             date = String.format("%s, %d/%d",convertToDayOfWeek(calendar.get(Calendar.DAY_OF_WEEK)),calendar.get(Calendar.DAY_OF_MONTH),calendar.get(Calendar.MONTH));
 

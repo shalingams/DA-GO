@@ -296,7 +296,7 @@ public class Home extends AppCompatActivity
                                 {
                                     Intent intent = new Intent(Home.this,InTripActivity.class);
                                     intent.putExtra("arrived",true);
-                                    intent.putExtra("driverId",postSnapShot.getKey());
+                                    intent.putExtra("driverID",postSnapShot.getKey());
                                     startActivity(intent);
                                 }
                             }
@@ -492,7 +492,6 @@ public class Home extends AppCompatActivity
                 {
                     Common.isDriverFound=true;
                     Common.driverId=key;
-                    Log.i("RRRRRR",key);
                     btnPickupRequest.setText("CALL DRIVER");
                    // Toast.makeText(Home.this, key, Toast.LENGTH_SHORT).show();
                 }
@@ -799,10 +798,60 @@ public class Home extends AppCompatActivity
         else if (id == R.id.nav_update_info) {
             showDialogUpdateInfo();
         }
+        else if(id == R.id.nav_tnc)
+        {
+            showTermsConditions();
+        }
+        else if(id == R.id.nav_privacy)
+        {
+            String url = "https://dagosrilanka.wixsite.com/dago";
+            Intent i = new Intent(Intent.ACTION_VIEW);
+            i.setData(Uri.parse(url));
+            startActivity(i);
+            //showPrivacy();
+        }
 
         DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
         drawer.closeDrawer(GravityCompat.START);
         return true;
+    }
+
+    private void showPrivacy() {
+        android.app.AlertDialog.Builder dialog = new android.app.AlertDialog.Builder(this);
+
+        LayoutInflater inflater = LayoutInflater.from(this);
+        View pr_layout = inflater.inflate(R.layout.layout_privacy,null);
+
+        dialog.setView(pr_layout);
+
+        dialog.setPositiveButton("OK", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialogInterface, int which) {
+                dialogInterface.dismiss();
+            }
+        });
+
+        dialog.show();
+    }
+
+    private void showTermsConditions() {
+
+        android.app.AlertDialog.Builder dialog = new android.app.AlertDialog.Builder(this);
+
+        LayoutInflater inflater = LayoutInflater.from(this);
+        View tnc_layout = inflater.inflate(R.layout.layout_tnc,null);
+
+        dialog.setView(tnc_layout);
+
+        dialog.setPositiveButton("OK", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialogInterface, int which) {
+                dialogInterface.dismiss();
+            }
+        });
+
+        dialog.show();
+
     }
 
     private void showDialogUpdateInfo() {
@@ -1062,7 +1111,7 @@ public class Home extends AppCompatActivity
             {
             Intent intent = new Intent(Home.this,CallDriver.class);
             String driveridc =marker.getSnippet().substring(12);
-            intent.putExtra("driverId",driveridc);
+            intent.putExtra("driverID",driveridc);
             intent.putExtra("isKandy",isKandy);
             intent.putExtra("lat",Common.mLastLocation.getLatitude());
             intent.putExtra("lng",Common.mLastLocation.getLongitude());
