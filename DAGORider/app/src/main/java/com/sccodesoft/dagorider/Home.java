@@ -1,6 +1,7 @@
 package com.sccodesoft.dagorider;
 
 import android.Manifest;
+import android.app.Activity;
 import android.app.ProgressDialog;
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -89,6 +90,7 @@ import com.sccodesoft.dagorider.Helper.CustomInfoWindow;
 import com.sccodesoft.dagorider.Model.Rider;
 import com.sccodesoft.dagorider.Model.Token;
 import com.sccodesoft.dagorider.Remote.IFCMServices;
+import com.sccodesoft.dagorider.Utill.GpsUtils;
 import com.squareup.picasso.Picasso;
 import com.theartofdev.edmodo.cropper.CropImage;
 import com.theartofdev.edmodo.cropper.CropImageView;
@@ -182,6 +184,14 @@ public class Home extends AppCompatActivity
         setContentView(R.layout.activity_home);
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
+
+        new GpsUtils(this).turnGPSOn(new GpsUtils.onGpsListener() {
+            @Override
+            public void gpsStatus(boolean isGPSEnable) {
+                // turn on GPS
+                Common.isGPS = isGPSEnable;
+            }
+        });
 
         LocalBroadcastManager.getInstance(this)
                 .registerReceiver(mCancelBroadCast,new IntentFilter(Common.CANCEL_BROADCAST_STRING));
@@ -374,7 +384,10 @@ public class Home extends AppCompatActivity
 
                 Common.mDestination = place.getLatLng();
 
-                mUserMarker = mMap.addMarker(new MarkerOptions()
+                if(markerDestination != null)
+                    markerDestination.remove();
+
+                markerDestination = mMap.addMarker(new MarkerOptions()
                                     .position(place.getLatLng())
                                     .icon(BitmapDescriptorFactory.fromResource(R.drawable.destination_marker))
                                     .title("Destination"));
@@ -770,16 +783,6 @@ public class Home extends AppCompatActivity
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
-        // Handle action bar item clicks here. The action bar will
-        // automatically handle clicks on the Home/Up button, so long
-        // as you specify a parent activity in AndroidManifest.xml.
-        int id = item.getItemId();
-
-        //noinspection SimplifiableIfStatement
-        if (id == R.id.action_settings) {
-            return true;
-        }
-
         return super.onOptionsItemSelected(item);
     }
 
@@ -802,6 +805,10 @@ public class Home extends AppCompatActivity
         {
             showTermsConditions();
         }
+        else if(id == R.id.nav_myInvCode)
+        {
+            showInviteCode();
+        }
         else if(id == R.id.nav_privacy)
         {
             String url = "https://dagosrilanka.wixsite.com/dago";
@@ -814,6 +821,42 @@ public class Home extends AppCompatActivity
         DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
         drawer.closeDrawer(GravityCompat.START);
         return true;
+    }
+
+    private void showInviteCode() {
+        AlertDialog.Builder alertDialog = new AlertDialog.Builder(this);
+        alertDialog.setMessage("YOUR INVITE CODE");
+
+        LayoutInflater inflater = LayoutInflater.from(this);
+        View invCode = inflater.inflate(R.layout.layout_mycode,null);
+
+        TextView myCode = (TextView)invCode.findViewById(R.id.myInvCode);
+        Button shareCode = (Button)invCode.findViewById(R.id.btnShareCode);
+
+        shareCode.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent sharingIntent = new Intent(android.content.Intent.ACTION_SEND);
+                sharingIntent.setType("text/plain");
+                String shareBody = "Please use my invite code "+Common.currentUser.getMyCode()+" to sign up for DAGO Driver App.";
+                sharingIntent.putExtra(android.content.Intent.EXTRA_SUBJECT, "DAGO Driver Invitation");
+                sharingIntent.putExtra(android.content.Intent.EXTRA_TEXT, shareBody);
+                startActivity(Intent.createChooser(sharingIntent, "Share via"));
+            }
+        });
+
+        myCode.setText(Common.currentUser.getMyCode());
+
+        alertDialog.setView(invCode);
+
+        alertDialog.setPositiveButton("Done", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                dialog.dismiss();
+            }
+        });
+
+        alertDialog.show();
     }
 
     private void showPrivacy() {
@@ -952,6 +995,12 @@ public class Home extends AppCompatActivity
     @Override
     protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
+
+        if (resultCode == Activity.RESULT_OK) {
+            if (requestCode == Common.GPS_REQUEST) {
+                Common.isGPS = true; // flag maintain before get location
+            }
+        }
 
         if(requestCode == Common.PICK_IMAGE_REQUEST && resultCode == RESULT_OK && data != null)
         {

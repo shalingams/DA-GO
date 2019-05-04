@@ -192,6 +192,8 @@ public class PhoneLogin extends AppCompatActivity {
                 mVerificationId = verificationId;
                 mResendToken = token;
 
+                tnc.setVisibility(View.GONE);
+
                 Toast.makeText(PhoneLogin.this, "Verification Code Sent Successfully..", Toast.LENGTH_SHORT).show();
 
                 sendCode.setText("Verify");
@@ -313,6 +315,7 @@ public class PhoneLogin extends AppCompatActivity {
 
         final MaterialEditText edtName = resigter_layout.findViewById(R.id.edtName);
         final MaterialEditText edtPhone = resigter_layout.findViewById(R.id.edtPhone);
+        final MaterialEditText edtIntroduceCode = resigter_layout.findViewById(R.id.edtIntroduceCode);
         image_upload = resigter_layout.findViewById(R.id.image_upload);
 
         image_upload.setOnClickListener(new View.OnClickListener() {
@@ -348,6 +351,8 @@ public class PhoneLogin extends AppCompatActivity {
                     waitingDialog.show();
 
                     Rider user = new Rider();
+                    user.setIntroduceCode(edtIntroduceCode.getText().toString());
+                    user.setMyCode(UUID.randomUUID().toString().substring(30).toUpperCase()+phoneNumber.getText().toString().substring(5));
                     user.setName(edtName.getText().toString());
                     user.setPhone("+94"+phoneNumber.getText().toString());
                     user.setAvatarUrl(avatarUrl);

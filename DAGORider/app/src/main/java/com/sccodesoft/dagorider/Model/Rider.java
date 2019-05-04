@@ -1,18 +1,36 @@
 package com.sccodesoft.dagorider.Model;
 
 public class Rider {
-    private String name,phone,avatarUrl,rates,carType,reserved;
+    private String name,phone,avatarUrl,rates,carType,reserved,introduceCode,myCode;
 
     public Rider() {
     }
 
-    public Rider(String name, String phone, String avatarUrl, String rates, String carType, String reserved) {
+    public Rider(String name, String phone, String avatarUrl, String rates, String carType, String reserved, String introduceCode, String myCode) {
         this.name = name;
         this.phone = phone;
         this.avatarUrl = avatarUrl;
         this.rates = rates;
         this.carType = carType;
         this.reserved = reserved;
+        this.introduceCode = introduceCode;
+        this.myCode = myCode;
+    }
+
+    public String getIntroduceCode() {
+        return introduceCode;
+    }
+
+    public void setIntroduceCode(String introduceCode) {
+        this.introduceCode = introduceCode;
+    }
+
+    public String getMyCode() {
+        return myCode;
+    }
+
+    public void setMyCode(String myCode) {
+        this.myCode = myCode;
     }
 
     public String getName() {

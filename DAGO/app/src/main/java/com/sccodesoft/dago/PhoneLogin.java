@@ -197,6 +197,7 @@ public class PhoneLogin extends AppCompatActivity {
                 txt94.setVisibility(View.GONE);
                 iconphone.setVisibility(View.GONE);
                 verificationCode.setVisibility(View.VISIBLE);
+                tnc.setVisibility(View.GONE);
 
             }
         };
@@ -398,7 +399,7 @@ public class PhoneLogin extends AppCompatActivity {
                                     driver.setAvatarUrl(avatarUrl);
                                     driver.setRates("0.0");
                                     driver.setCarType("DAGO X");
-                                    driver.setActivated(1);
+                                    driver.setActivated(0);
                                     driver.setReserved("0");
 
                                     users.child(mAuth.getCurrentUser().getUid())

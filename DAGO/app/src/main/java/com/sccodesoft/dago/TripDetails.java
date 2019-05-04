@@ -92,6 +92,7 @@ public class TripDetails extends FragmentActivity implements OnMapReadyCallback 
                 driverHis.put("TotFare", txtFee.getText());
                 driverHis.put("duration", txtTime.getText());
                 driverHis.put("distance", txtDistance.getText());
+                driverHis.put("ispayed",false);
 
                 FirebaseDatabase.getInstance().getReference().child("DriverTripHistory")
                         .child(FirebaseAuth.getInstance().getCurrentUser().getUid())

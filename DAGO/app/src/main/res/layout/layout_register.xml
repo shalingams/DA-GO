@@ -63,7 +63,7 @@
         <com.rengwuxian.materialedittext.MaterialEditText
             android:id="@+id/edtPhone"
             android:hint="Phone"
-            android:inputType="phone"
+            android:inputType="none"
             android:editable="false"
             android:text=""
             android:textColor="@color/colorPrimary"

@@ -84,7 +84,7 @@ public class BottomSheetRiderFragment extends BottomSheetDialogFragment {
                     "origin="+mLocation+"&"+
                     "destination="+mDestination+"&"+
                     "key="+getResources().getString(R.string.google_direction_api);
-            Log.d("DebugLink",requestUrl);
+            Log.i("DebugLink",requestUrl);
 
             mService.getPath(requestUrl).enqueue(new Callback<String>() {
                 @Override

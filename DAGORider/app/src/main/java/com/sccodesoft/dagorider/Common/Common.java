@@ -33,6 +33,8 @@ import retrofit2.Response;
 
 public class Common {
 
+    public static int GPS_REQUEST=19279;
+    public static boolean isGPS=false;
 
     public static boolean isDriverFound=false;
     public static String driverId="";
@@ -63,7 +65,7 @@ public class Common {
 
     public static double base_farex = 50;
     public static double time_ratex = 2;
-    public static double distance_ratex = 40;
+    public static double distance_ratex = 35;
 
     public static double base_fareb = 140;
     public static double time_rateb = 4;

@@ -10,6 +10,9 @@ import com.sccodesoft.dago.Remote.RetrofitClient;
 
 public class Common
 {
+    public static int GPS_REQUEST=19278;
+    public static boolean isGPS=false;
+
     public static final String driver_tbl = "Drivers";
     public static final String user_driver_tbl = "DriversInformation";
     public static final String user_rider_tbl = "RidersInformation";
@@ -37,7 +40,7 @@ public class Common
 
     public static double base_farex = 50;
     public static double time_ratex = 2;
-    public static double distance_ratex = 40;
+    public static double distance_ratex = 35;
 
     public static double base_fareb = 140;
     public static double time_rateb = 4;

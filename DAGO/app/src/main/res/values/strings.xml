@@ -1,7 +1,7 @@
 <resources>
     <string name="app_name">DA GO</string>
     <string name="title_activity_welcome">Map</string>
-    <string name="google_direction_api">AIzaSyBuPmIQ7XkoPNzZL1JaB7xyD7blfiKZX2M</string>
+    <string name="google_direction_api">AIzaSyC2C_D6y3dlMYB14_xo8_VL2qBPcdOum0Y</string>
     <string name="title_activity_driver_tracking">Map</string>
     <string name="title_activity_trip_details">Map</string>
     <string name="title_activity_driver_home">DriverHome</string>

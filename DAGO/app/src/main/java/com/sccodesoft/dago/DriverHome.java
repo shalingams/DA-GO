@@ -2,6 +2,7 @@ package com.sccodesoft.dago;
 
 import android.Manifest;
 import android.animation.ValueAnimator;
+import android.app.Activity;
 import android.app.ProgressDialog;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -88,6 +89,7 @@ import com.sccodesoft.dago.Common.Common;
 import com.sccodesoft.dago.Model.Driver;
 import com.sccodesoft.dago.Model.Token;
 import com.sccodesoft.dago.Remote.IGoogleApi;
+import com.sccodesoft.dago.Utill.GpsUtils;
 import com.squareup.picasso.Picasso;
 import com.theartofdev.edmodo.cropper.CropImage;
 import com.theartofdev.edmodo.cropper.CropImageView;
@@ -227,6 +229,14 @@ public class DriverHome extends AppCompatActivity
         setContentView(R.layout.activity_driver_home);
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
+
+        new GpsUtils(this).turnGPSOn(new GpsUtils.onGpsListener() {
+            @Override
+            public void gpsStatus(boolean isGPSEnable) {
+                // turn on GPS
+                Common.isGPS = isGPSEnable;
+            }
+        });
 
         firebaseStorage = FirebaseStorage.getInstance();
         storageReference = firebaseStorage.getReference();
@@ -990,6 +1000,12 @@ public class DriverHome extends AppCompatActivity
     @Override
     protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
+
+        if (resultCode == Activity.RESULT_OK) {
+            if (requestCode == Common.GPS_REQUEST) {
+                Common.isGPS = true; // flag maintain before get location
+            }
+        }
 
         if(requestCode == Common.PICK_IMAGE_REQUEST && resultCode == RESULT_OK && data != null)
         {
