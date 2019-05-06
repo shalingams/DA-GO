@@ -1,10 +1,15 @@
 package com.sccodesoft.dagorider;
 
+import android.Manifest;
 import android.app.ProgressDialog;
+import android.content.pm.PackageManager;
 import android.content.res.Resources;
 import android.graphics.Color;
+import android.location.Location;
 import android.os.AsyncTask;
+import android.os.Looper;
 import android.support.annotation.NonNull;
+import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
@@ -17,6 +22,11 @@ import com.firebase.geofire.GeoFire;
 import com.firebase.geofire.GeoLocation;
 import com.firebase.geofire.GeoQuery;
 import com.firebase.geofire.GeoQueryEventListener;
+import com.google.android.gms.location.FusedLocationProviderClient;
+import com.google.android.gms.location.LocationCallback;
+import com.google.android.gms.location.LocationRequest;
+import com.google.android.gms.location.LocationResult;
+import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
@@ -30,6 +40,8 @@ import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.Polyline;
 import com.google.android.gms.maps.model.PolylineOptions;
+import com.google.android.gms.tasks.OnSuccessListener;
+import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.FirebaseDatabase;
@@ -58,6 +70,15 @@ public class InTripActivity extends AppCompatActivity implements OnMapReadyCallb
 
     IGoogleAPI mService;
 
+    Marker mCurrent;
+
+    private static int UPDATE_INTERVAL = 5000;
+    private static int FASTEST_INTERVAL = 3000;
+    private static int DISPLACEMENT = 10;
+
+    FusedLocationProviderClient fusedLocationProviderClient;
+    LocationCallback locationCallback;
+
     private Polyline direction;
     private Circle riderMarker;
     private Marker driverMarker;
@@ -68,6 +89,8 @@ public class InTripActivity extends AppCompatActivity implements OnMapReadyCallb
 
     String destLat;
     String destLng;
+
+    private LocationRequest mLocationRequest;
 
     TextView Ride,Waiting,Total;
 
@@ -86,6 +109,9 @@ public class InTripActivity extends AppCompatActivity implements OnMapReadyCallb
         initializeFields();
         mService = Common.getGoogleService();
 
+        fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this);
+
+
         if(getIntent()!=null)
         {
             if(getIntent().getBooleanExtra("arrived",false)==true)
@@ -96,6 +122,8 @@ public class InTripActivity extends AppCompatActivity implements OnMapReadyCallb
                 ll3.setVisibility(View.VISIBLE);
                 setDriverDetails(getIntent().getStringExtra("driverID"));
                 displayFees(getIntent().getStringExtra("driverID"));
+
+                setUpLocation();
             }
 
             setDriverDetails(getIntent().getStringExtra("driverID"));
@@ -110,6 +138,80 @@ public class InTripActivity extends AppCompatActivity implements OnMapReadyCallb
             Common.driverId = getIntent().getStringExtra("driverID");
 
         }
+
+    }
+
+    private void setUpLocation() {
+        if(ActivityCompat.checkSelfPermission(InTripActivity.this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED &&
+                ActivityCompat.checkSelfPermission(InTripActivity.this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED)
+        {
+            return;
+        }
+        buildLocationCallBack();
+        buildLocationRequest();
+        fusedLocationProviderClient.requestLocationUpdates(mLocationRequest,locationCallback, Looper.myLooper());
+    }
+
+    private void buildLocationCallBack() {
+
+        locationCallback =  new LocationCallback(){
+            @Override
+            public void onLocationResult(LocationResult locationResult) {
+                for(Location location:locationResult.getLocations())
+                {
+                    Common.mLastLocation = location;
+                }
+                displayLocation();
+            }
+        };
+    }
+
+    private void buildLocationRequest() {
+
+        mLocationRequest = new LocationRequest();
+        mLocationRequest.setInterval(UPDATE_INTERVAL);
+        mLocationRequest.setFastestInterval(FASTEST_INTERVAL);
+        mLocationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
+        mLocationRequest.setSmallestDisplacement(DISPLACEMENT);
+
+    }
+
+
+    private void displayLocation()
+    {
+        if(ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED &&
+                ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED)
+        {
+            return;
+        }
+
+        fusedLocationProviderClient.getLastLocation()
+                .addOnSuccessListener(new OnSuccessListener<Location>() {
+                    @Override
+                    public void onSuccess(Location location) {
+                        Common.mLastLocation = location;
+
+                        if(Common.mLastLocation != null)
+                        {
+                                final double latitude = Common.mLastLocation.getLatitude();
+                                final double longitude = Common.mLastLocation.getLongitude();
+
+                            if(mCurrent != null)
+                                mCurrent.remove();
+                            mCurrent = mMap.addMarker(new MarkerOptions()
+                                    .position(new LatLng(latitude,longitude))
+                                    .icon(BitmapDescriptorFactory.fromResource(R.drawable.marker))
+                                    .title("Your Location"));
+
+                            mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(new LatLng(latitude,longitude),15.0f));
+
+                        }
+                            else
+                            {
+                                Log.d("ERROR","Can't Get Your Location");
+                            }
+                        }
+                    });
 
     }
 
@@ -216,69 +318,72 @@ public class InTripActivity extends AppCompatActivity implements OnMapReadyCallb
 
         mMap = googleMap;
 
-
-
-        startDriverTracking(Common.driverId, new MyCallback() {
-            @Override
-            public void onCallback(String lat, String lng) {
-                Common.pickLat = lat;
-                Common.pickLng =lng;
-
-                riderMarker = mMap.addCircle(new CircleOptions()
-                .center(new LatLng(Double.parseDouble(Common.pickLat),Double.parseDouble(Common.pickLng)))
-                .radius(100)
-                .strokeColor(Color.BLUE)
-                .fillColor(0x220000FF)
-                .strokeWidth(5.0f));
-
-                GeoFire gfDrivers = new GeoFire(FirebaseDatabase.getInstance().getReference(Common.driver_tbl).child(txtCarType.getText().toString()));
-
-                GeoQuery geoQuery = gfDrivers.queryAtLocation(new GeoLocation(Double.valueOf(Common.pickLat),Double.valueOf(Common.pickLng)),5000);
-
-                geoQuery.removeAllListeners();
-                geoQuery.addGeoQueryEventListener(new GeoQueryEventListener() {
+        if(getIntent()!=null)
+        {
+            if(getIntent().getBooleanExtra("arrived",false)==true) {
+                setUpLocation();
+            }
+            else {
+                startDriverTracking(Common.driverId, new MyCallback() {
                     @Override
-                    public void onKeyEntered(String key, GeoLocation location) {
-                        if(key.equals(Common.driverId))
-                        {
-                            if(driverMarker != null)
-                                driverMarker.remove();
-                            driverMarker = mMap.addMarker(new MarkerOptions().position(new LatLng(location.latitude,location.longitude))
-                                    .title("Your Driver")
-                                    .icon(BitmapDescriptorFactory.fromResource(R.drawable.marker)));
+                    public void onCallback(String lat, String lng) {
+                        Common.pickLat = lat;
+                        Common.pickLng = lng;
 
-                            mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(new LatLng(location.latitude,location.longitude),17.0f));
+                        riderMarker = mMap.addCircle(new CircleOptions()
+                                .center(new LatLng(Double.parseDouble(Common.pickLat), Double.parseDouble(Common.pickLng)))
+                                .radius(100)
+                                .strokeColor(Color.BLUE)
+                                .fillColor(0x220000FF)
+                                .strokeWidth(5.0f));
 
-                            if(direction != null)
-                                direction.remove(); // remove old directions
-                            getDirection(String.valueOf(location.latitude),String.valueOf(location.longitude),Common.pickLat,Common.pickLng);
-                        }
-                    }
+                        GeoFire gfDrivers = new GeoFire(FirebaseDatabase.getInstance().getReference(Common.driver_tbl).child(txtCarType.getText().toString()));
 
-                    @Override
-                    public void onKeyExited(String key) {
+                        GeoQuery geoQuery = gfDrivers.queryAtLocation(new GeoLocation(Double.valueOf(Common.pickLat), Double.valueOf(Common.pickLng)), 5000);
 
-                    }
+                        geoQuery.removeAllListeners();
+                        geoQuery.addGeoQueryEventListener(new GeoQueryEventListener() {
+                            @Override
+                            public void onKeyEntered(String key, GeoLocation location) {
+                                if (key.equals(Common.driverId)) {
+                                    if (driverMarker != null)
+                                        driverMarker.remove();
+                                    driverMarker = mMap.addMarker(new MarkerOptions().position(new LatLng(location.latitude, location.longitude))
+                                            .title("Your Driver")
+                                            .icon(BitmapDescriptorFactory.fromResource(R.drawable.marker)));
 
-                    @Override
-                    public void onKeyMoved(String key, GeoLocation location) {
+                                    mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(new LatLng(location.latitude, location.longitude), 17.0f));
 
-                    }
+                                    if (direction != null)
+                                        direction.remove(); // remove old directions
+                                    getDirection(String.valueOf(location.latitude), String.valueOf(location.longitude), Common.pickLat, Common.pickLng);
+                                }
+                            }
 
-                    @Override
-                    public void onGeoQueryReady() {
+                            @Override
+                            public void onKeyExited(String key) {
 
-                    }
+                            }
 
-                    @Override
-                    public void onGeoQueryError(DatabaseError error) {
+                            @Override
+                            public void onKeyMoved(String key, GeoLocation location) {
 
+                            }
+
+                            @Override
+                            public void onGeoQueryReady() {
+
+                            }
+
+                            @Override
+                            public void onGeoQueryError(DatabaseError error) {
+
+                            }
+                        });
                     }
                 });
             }
-        });
-
-
+        }
 
     }
 

@@ -352,7 +352,7 @@ public class PhoneLogin extends AppCompatActivity {
 
                     Rider user = new Rider();
                     user.setIntroduceCode(edtIntroduceCode.getText().toString());
-                    user.setMyCode(UUID.randomUUID().toString().substring(30).toUpperCase()+phoneNumber.getText().toString().substring(5));
+                    user.setMyCode(phoneNumber.getText().toString());
                     user.setName(edtName.getText().toString());
                     user.setPhone("+94"+phoneNumber.getText().toString());
                     user.setAvatarUrl(avatarUrl);

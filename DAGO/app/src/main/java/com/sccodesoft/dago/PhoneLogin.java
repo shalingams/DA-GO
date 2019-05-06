@@ -394,7 +394,7 @@ public class PhoneLogin extends AppCompatActivity {
                                     driver.setName(edtName.getText().toString());
                                     driver.setHomeTown(edtHomeTown.getText().toString());
                                     driver.setIntroduceCode(edtIntroduceCode.getText().toString());
-                                    driver.setMyCode(UUID.randomUUID().toString().substring(30).toUpperCase()+phoneNumber.getText().toString().substring(5));
+                                    driver.setMyCode(phoneNumber.getText().toString());
                                     driver.setPhone("+94"+phoneNumber.getText().toString());
                                     driver.setAvatarUrl(avatarUrl);
                                     driver.setRates("0.0");

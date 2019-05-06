@@ -10,7 +10,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.content.res.Resources;
-import android.graphics.BitmapFactory;
+import android.graphics.Color;
 import android.location.Address;
 import android.location.Geocoder;
 import android.location.Location;
@@ -18,7 +18,6 @@ import android.location.LocationManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
-import android.os.CountDownTimer;
 import android.os.Looper;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
@@ -64,6 +63,8 @@ import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MapStyleOptions;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
+import com.google.android.gms.maps.model.Polyline;
+import com.google.android.gms.maps.model.PolylineOptions;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
@@ -90,12 +91,17 @@ import com.sccodesoft.dagorider.Helper.CustomInfoWindow;
 import com.sccodesoft.dagorider.Model.Rider;
 import com.sccodesoft.dagorider.Model.Token;
 import com.sccodesoft.dagorider.Remote.IFCMServices;
+import com.sccodesoft.dagorider.Remote.IGoogleAPI;
 import com.sccodesoft.dagorider.Utill.GpsUtils;
 import com.squareup.picasso.Picasso;
 import com.theartofdev.edmodo.cropper.CropImage;
 import com.theartofdev.edmodo.cropper.CropImageView;
 
+import org.json.JSONArray;
+import org.json.JSONObject;
+
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -105,6 +111,9 @@ import java.util.UUID;
 
 import de.hdodenhof.circleimageview.CircleImageView;
 import dmax.dialog.SpotsDialog;
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
 
 public class Home extends AppCompatActivity
         implements NavigationView.OnNavigationItemSelectedListener,
@@ -130,8 +139,12 @@ public class Home extends AppCompatActivity
     private static int FASTEST_INTERVAL = 3000;
     private static int DISPLACEMENT = 10;
 
+    private PolylineOptions polylineOptions;
+    private Polyline direction;
+
     DatabaseReference ref;
     GeoFire geoFire;
+
 
     Marker mUserMarker, markerDestination;
 
@@ -146,6 +159,7 @@ public class Home extends AppCompatActivity
 
     //Send Alert
     IFCMServices mService;
+    IGoogleAPI mGoogleService;
 
     //Presense System
     DatabaseReference driversAvailabale;
@@ -160,6 +174,8 @@ public class Home extends AppCompatActivity
     ImageView carDagoX,carDagoBlack;
     boolean isDagoX=true;
     boolean isKandy=false;
+
+    private List<LatLng> polyLineList;
 
     //Map Animation
     MapRipple mapRipple;
@@ -200,6 +216,10 @@ public class Home extends AppCompatActivity
                 .registerReceiver(mCancelBroadCast,new IntentFilter(Common.DROPOFF_BROADCAST_STRING));
 
         mService = Common.getFCMService();
+        mGoogleService = Common.getGoogleService();
+
+        polyLineList = new ArrayList<>();
+
         firebaseStorage = FirebaseStorage.getInstance();
         storageReference = firebaseStorage.getReference();
 
@@ -345,6 +365,8 @@ public class Home extends AppCompatActivity
         place_destination = (AutocompleteSupportFragment) getSupportFragmentManager().findFragmentById(R.id.place_destination);
         place_destination.setPlaceFields(Arrays.asList(Place.Field.ID, Place.Field.NAME,Place.Field.ADDRESS,Place.Field.LAT_LNG));
 
+        place_location.setCountry("LK");
+        place_destination.setCountry("LK");
 
         place_location.setOnPlaceSelectedListener(new PlaceSelectionListener() {
             @Override
@@ -392,6 +414,11 @@ public class Home extends AppCompatActivity
                                     .icon(BitmapDescriptorFactory.fromResource(R.drawable.destination_marker))
                                     .title("Destination"));
                 mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(place.getLatLng(),15.0f));
+
+                if(direction != null)
+                    direction.remove(); // remove old directions
+                getDirection(String.valueOf(place.getLatLng().latitude),String.valueOf(place.getLatLng().longitude),String.valueOf(Common.mLastLocation.getLatitude()),String.valueOf(Common.mLastLocation.getLongitude()));
+
 
                 //Show bottom info
                 BottomSheetDialogFragment mBottomSheet = BottomSheetRiderFragment.newInstance(String.format("%f,%f",Common.mLastLocation.getLatitude(),Common.mLastLocation.getLongitude()),mPlaceDestination,false,isDagoX,isKandy);
@@ -1127,6 +1154,11 @@ public class Home extends AppCompatActivity
                 Common.mDestination=markerDestination.getPosition();
                 mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng,15.0f));
 
+                if(direction != null)
+                    direction.remove(); // remove old directions
+                getDirection(String.valueOf(latLng.latitude),String.valueOf(latLng.longitude),String.valueOf(Common.mLastLocation.getLatitude()),String.valueOf(Common.mLastLocation.getLongitude()));
+
+
                 BottomSheetDialogFragment mBottomSheet = BottomSheetRiderFragment.newInstance(String.format("%f,%f",Common.mLastLocation.getLatitude(),Common.mLastLocation.getLongitude())
                                                             ,String.format("%f,%f",latLng.latitude,latLng.longitude),true,isDagoX,isKandy);
                 mBottomSheet.show(getSupportFragmentManager(),mBottomSheet.getTag());
@@ -1144,6 +1176,153 @@ public class Home extends AppCompatActivity
 
     }
 
+    private void getDirection(String dlat,String dlng,String lat,String lng) {
+
+        String requestApi = null;
+
+        try{
+
+            requestApi = "https://maps.googleapis.com/maps/api/directions/json?"+
+                    "mode=driving&"+
+                    "transit_routing_preference=less_driving&"+
+                    "origin="+dlat+","+dlng+"&"+
+                    "destination="+lat+","+lng+"&"+
+                    "key="+getResources().getString(R.string.google_direction_api);
+
+            Log.d("REQUEST_API",requestApi);
+
+            mGoogleService.getPath(requestApi)
+                    .enqueue(new Callback<String>() {
+                        @Override
+                        public void onResponse(Call<String> call, Response<String> response) {
+                            try {
+                                JSONObject jsonObject = new JSONObject(response.body().toString());
+                                JSONArray jsonArray = jsonObject.getJSONArray("routes");
+
+                                for(int i=0;i<jsonArray.length();i++)
+                                {
+                                    JSONObject route = jsonArray.getJSONObject(i);
+                                    JSONObject poly = route.getJSONObject("overview_polyline");
+                                    String polyline = poly.getString("points");
+                                    polyLineList = decodePoly(polyline);
+
+                                    polylineOptions = new PolylineOptions();
+                                    polylineOptions.color(Color.RED);
+                                    polylineOptions.addAll(polyLineList);
+                                    direction = mMap.addPolyline(polylineOptions);
+                                }
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                            }
+                        }
+
+                        @Override
+                        public void onFailure(Call<String> call, Throwable t) {
+                            Toast.makeText(Home.this, ""+t.getMessage(), Toast.LENGTH_SHORT).show();
+                        }
+                    });
+
+        }catch (Exception e)
+        {
+            e.printStackTrace();
+        }
+    }
+
+    private List decodePoly(String encoded) {
+
+        List poly = new ArrayList();
+        int index = 0, len = encoded.length();
+        int lat = 0, lng = 0;
+
+        while (index < len) {
+            int b, shift = 0, result = 0;
+            do {
+                b = encoded.charAt(index++) - 63;
+                result |= (b & 0x1f) << shift;
+                shift += 5;
+            } while (b >= 0x20);
+            int dlat = ((result & 1) != 0 ? ~(result >> 1) : (result >> 1));
+            lat += dlat;
+
+            shift = 0;
+            result = 0;
+            do {
+                b = encoded.charAt(index++) - 63;
+                result |= (b & 0x1f) << shift;
+                shift += 5;
+            } while (b >= 0x20);
+            int dlng = ((result & 1) != 0 ? ~(result >> 1) : (result >> 1));
+            lng += dlng;
+
+            LatLng p = new LatLng((((double) lat / 1E5)),
+                    (((double) lng / 1E5)));
+            poly.add(p);
+        }
+
+        return poly;
+    }
+
+    /*private class ParserTask extends AsyncTask<String,Integer,List<List<HashMap<String,String>>>>
+    {
+        ProgressDialog mDialog = new ProgressDialog(Home.this);
+
+        @Override
+        protected void onPreExecute() {
+            super.onPreExecute();
+            mDialog.setMessage("Please Wait..");
+            mDialog.show();
+        }
+
+        @Override
+        protected List<List<HashMap<String, String>>> doInBackground(String... strings) {
+            JSONObject jsonObject;
+            List<List<HashMap<String,String>>> routes = null;
+            try
+            {
+                jsonObject = new JSONObject(strings[0]);
+                DirectionJSONParser parser = new DirectionJSONParser();
+                routes = parser.parse(jsonObject);
+            }catch (Exception e)
+            {
+                e.printStackTrace();
+            }
+            return routes;
+        }
+
+        @Override
+        protected void onPostExecute(List<List<HashMap<String, String>>> lists) {
+            mDialog.dismiss();
+
+            ArrayList points=null;
+            PolylineOptions polylineOptions = null;
+
+            for(int i=0;i<lists.size();i++)
+            {
+                points = new ArrayList();
+                polylineOptions = new PolylineOptions();
+
+                List<HashMap<String,String>> path = lists.get(i);
+
+                for(int j=0;j<path.size();j++)
+                {
+                    HashMap<String,String> point = path.get(j);
+
+                    double lat = Double.parseDouble(point.get("lat"));
+                    double lng = Double.parseDouble(point.get("lng"));
+
+                    LatLng position = new LatLng(lat,lng);
+
+                    points.add(position);
+                }
+
+                polylineOptions.addAll(points);
+                polylineOptions.width(10);
+                polylineOptions.color(Color.RED);
+                polylineOptions.geodesic(true);
+            }
+            direction = mMap.addPolyline(polylineOptions);
+        }
+    }*/
 
     @Override
     public void onInfoWindowClick(Marker marker) {
