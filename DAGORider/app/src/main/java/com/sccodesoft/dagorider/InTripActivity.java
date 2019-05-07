@@ -240,10 +240,10 @@ public class InTripActivity extends AppCompatActivity implements OnMapReadyCallb
                     public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
 
                         txtDriverName.setText(dataSnapshot.child("name").getValue().toString());
-                        txtCarType.setText(dataSnapshot.child("carType").getValue().toString());
-                        txtVehicleNo.setText(dataSnapshot.child("vNumber").getValue().toString());
-                        txtStars.setText(dataSnapshot.child("rates").getValue().toString());
-                        txtDriverPhone.setText(dataSnapshot.child("phone").getValue().toString());
+                        txtCarType.setText(dataSnapshot.child("carType").getValue()==null ? "N/A" : dataSnapshot.child("carType").getValue().toString());
+                        txtVehicleNo.setText(dataSnapshot.child("vNumber").getValue() == null ? "N/A" : dataSnapshot.child("vNumber").getValue().toString());
+                        txtStars.setText(dataSnapshot.child("rates").getValue() == null ? "0.0" : dataSnapshot.child("rates").getValue().toString());
+                        txtDriverPhone.setText(dataSnapshot.child("phone").getValue()== null ? "N/A" : dataSnapshot.child("phone").getValue().toString());
 
                         Picasso.with(InTripActivity.this)
                                 .load(dataSnapshot.child("avatarUrl").getValue().toString())

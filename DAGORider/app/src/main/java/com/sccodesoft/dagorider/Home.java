@@ -178,7 +178,7 @@ public class Home extends AppCompatActivity
     private List<LatLng> polyLineList;
 
     //Map Animation
-    MapRipple mapRipple;
+//    MapRipple mapRipple;
 
     private BroadcastReceiver mCancelBroadCast = new BroadcastReceiver() {
         @Override
@@ -499,13 +499,13 @@ public class Home extends AppCompatActivity
 
         mUserMarker.showInfoWindow();
 
-        mapRipple = new MapRipple(mMap,new LatLng(Common.mLastLocation.getLatitude(),Common.mLastLocation.getLongitude()),this);
-        mapRipple.withNumberOfRipples(1);
-        mapRipple.withDistance(500);
-        mapRipple.withRippleDuration(1000);
-        mapRipple.withTransparency(0.5f);
+//        mapRipple = new MapRipple(mMap,new LatLng(Common.mLastLocation.getLatitude(),Common.mLastLocation.getLongitude()),this);
+//        mapRipple.withNumberOfRipples(1);
+//        mapRipple.withDistance(500);
+//        mapRipple.withRippleDuration(1000);
+//        mapRipple.withTransparency(0.5f);
 
-        mapRipple.startRippleMapAnimation();
+//        mapRipple.startRippleMapAnimation();
 
         btnPickupRequest.setText("Getting Your Driver...");
 
@@ -564,8 +564,8 @@ public class Home extends AppCompatActivity
 
                         btnPickupRequest.setEnabled(true);
 
-                        if(mapRipple.isAnimationRunning())
-                            mapRipple.stopRippleMapAnimation();
+//                        if(mapRipple.isAnimationRunning())
+//                            mapRipple.stopRippleMapAnimation();
 
                         mUserMarker.hideInfoWindow();
 

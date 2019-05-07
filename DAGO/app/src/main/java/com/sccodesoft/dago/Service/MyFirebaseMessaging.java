@@ -40,6 +40,7 @@ public class MyFirebaseMessaging extends FirebaseMessagingService {
            // LatLng customer_location = new Gson().fromJson(message, LatLng.class);
 
             Intent intent = new Intent(getBaseContext(), CustomerCall.class);
+            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             intent.putExtra("lat", lat);
             intent.putExtra("lng", lng);
             intent.putExtra("destlat",destlat);

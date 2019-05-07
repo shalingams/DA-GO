@@ -53,6 +53,9 @@ public class MyFirebaseMessaging extends FirebaseMessagingService {
         if(remoteMessage.getData() != null) {
             Map<String,String> data = remoteMessage.getData();
             String title = data.get("title");
+            if(data!= null && !data.containsKey("title")){
+                return;
+            }
             final String message = data.get("message");
 
             if(title.equals("Request Canceled!")) {
